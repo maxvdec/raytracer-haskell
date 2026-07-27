@@ -1,0 +1,22 @@
+module Image where
+
+type Resolution = (Integer, Integer)
+
+ppmHeader :: Resolution -> String
+ppmHeader (width, height) = "P3\n" ++ (show width) ++ " " ++ (show height) ++ "\n255\n"
+
+type Color = (Integer, Integer, Integer)
+
+fillColorData :: Color -> String
+fillColorData (r, g, b) = (show r) ++ " " ++ (show g) ++ " " ++ (show b)
+
+putColor :: Color -> String
+putColor = fillColorData
+
+fillColorTotal :: Integer -> Color -> String
+fillColorTotal pixels color 
+    | pixels == 0 = fillColorData color
+    | otherwise = fillColorData color ++ fillColorTotal (pixels - 1) color
+
+fillColor :: Resolution -> Color -> String
+fillColor (w, h) color = fillColorTotal (w * h) color
