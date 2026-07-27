@@ -61,6 +61,7 @@ executable raytracer
     other-modules:
         Image
         Renders
+        Math
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
