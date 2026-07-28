@@ -12,9 +12,9 @@ putColor :: Color -> String
 putColor color = fillColorData color ++ "\n"
 
 fillColorTotal :: Integer -> Color -> String
-fillColorTotal pixels color 
+fillColorTotal pixels color
     | pixels == 0 = ""
-    | otherwise = fillColorData color ++ fillColorTotal (pixels - 1) color
+    | otherwise = putColor color ++ fillColorTotal (pixels - 1) color
 
 fillColor :: Resolution -> Color -> String
 fillColor (w, h) color = fillColorTotal (w * h) color
