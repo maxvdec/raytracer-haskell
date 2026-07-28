@@ -11,7 +11,7 @@ devResolution :: Resolution
 devResolution = (400, 255)
 
 redFiller :: Resolution -> ImageCoord -> Color
-redFiller _ _ = (255, 0, 255)
+redFiller _ _ = (1.0, 0, 1.0)
 
 main :: IO ()
 main = do

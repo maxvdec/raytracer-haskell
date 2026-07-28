@@ -5,11 +5,11 @@ import Math
 ppmHeader :: Resolution -> String
 ppmHeader (width, height) = "P3\n" ++ (show width) ++ " " ++ (show height) ++ "\n255\n"
 
-fillColorData :: Color -> String
+fillColorData :: NormalizedColor -> String
 fillColorData (r, g, b) = (show r) ++ " " ++ (show g) ++ " " ++ (show b)
 
 putColor :: Color -> String
-putColor color = fillColorData color ++ "\n"
+putColor color = fillColorData (normalizeColor color) ++ "\n"
 
 fillColorTotal :: Integer -> Color -> String
 fillColorTotal pixels color

@@ -3,10 +3,11 @@
 module Math where
 
 type Resolution = (Integer, Integer)
-type Color = (Integer, Integer, Integer)
+type Color = (Float, Float, Float)
 type ImageCoord = (Integer, Integer)
+type NormalizedColor = (Integer, Integer, Integer)
 
-normalizeColor :: (Float, Float, Float) -> Color
+normalizeColor :: Color -> NormalizedColor
 normalizeColor (r, g, b) = (round (r * 255), round (g * 255), round (b * 255))
 
 ratio :: Integer -> Integer -> Float

@@ -7,7 +7,7 @@ import System.IO (hFlush, stdout)
 -- UV Render
 uvForPos :: ImageCoord -> Resolution -> Color
 uvForPos (x, y) (w, h) =
-    normalizeColor (ratio x w, ratio y h, 0)
+    (ratio x w, ratio y h, 0)
 
 -- Render everything
 uvRow :: Resolution -> Integer -> Integer -> String
