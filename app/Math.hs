@@ -5,6 +5,7 @@ module Math where
 type Resolution = (Integer, Integer)
 type Color = (Float, Float, Float)
 type ImageCoord = (Integer, Integer)
+type TextureCoord = (Float, Float)
 type NormalizedColor = (Integer, Integer, Integer)
 
 normalizeColor :: Color -> NormalizedColor
@@ -15,6 +16,7 @@ ratio a b = fromIntegral a / ((fromIntegral b) - 1)
 
 -- Vec 3 class
 data Vector3 = Vector3 Float Float Float deriving (Show, Eq)
+type Point3 = Vector3
 
 instance Num Vector3 where
     (+) :: Vector3 -> Vector3 -> Vector3
@@ -57,6 +59,22 @@ scalar ./ Vector3 x y z =
 (/.) :: Vector3 -> Float -> Vector3
 Vector3 x y z /. scalar =
     Vector3 (scalar / x) (scalar / y) (scalar / z)
+
+(.+) :: Float -> Vector3 -> Vector3
+scalar .+ Vector3 x y z =
+    Vector3 (scalar + x) (scalar + y) (scalar + z)
+
+(+.) :: Vector3 -> Float -> Vector3
+Vector3 x y z +. scalar =
+    Vector3 (scalar + x) (scalar + y) (scalar + z)
+
+(.-) :: Float -> Vector3 -> Vector3
+scalar .- Vector3 x y z =
+    Vector3 (scalar - x) (scalar - y) (scalar - z)
+
+(-.) :: Vector3 -> Float -> Vector3
+Vector3 x y z -. scalar =
+    Vector3 (scalar - x) (scalar - y) (scalar - z)
 
 dot :: Vector3 -> Vector3 -> Float
 dot (Vector3 ax ay az) (Vector3 bx by bz) =
