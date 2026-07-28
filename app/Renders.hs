@@ -23,3 +23,30 @@ uvRows res@(_, h) y
 
 uvRender :: Resolution -> String
 uvRender res = uvRows res 0
+
+-- Computed image
+computedRow ::
+    (Resolution -> ImageCoord -> Color) ->
+    Resolution ->
+    Integer ->
+    Integer ->
+    String
+computedRow f (w, h) x y
+    | x < w =
+        putColor (f (x, y) (w, h)) ++ computedRow f (w, h) (x + 1) y
+    | otherwise = ""
+
+computedRows ::
+    (Resolution -> ImageCoord -> Color) ->
+    Resolution ->
+    Integer ->
+    String
+computedRows f res@(_, h) y
+    | y < h = computedRow f res 0 y ++ computedRows f res (y + 1)
+    | otherwise = ""
+
+computedImage ::
+    (Resolution -> ImageCoord -> Color) ->
+    Resolution ->
+    String
+computedImage f res = computedRows f res 0
