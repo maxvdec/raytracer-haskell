@@ -2,6 +2,7 @@ module Renders where
 
 import Image (putColor)
 import Math (Color, ImageCoord, Resolution, normalizeColor, ratio)
+import System.IO (hFlush, stdout)
 
 -- UV Render
 uvForPos :: ImageCoord -> Resolution -> Color
@@ -30,23 +31,32 @@ computedRow ::
     Resolution ->
     Integer ->
     Integer ->
-    String
-computedRow f (w, h) x y
-    | x < w =
-        putColor (f (x, y) (w, h)) ++ computedRow f (w, h) (x + 1) y
-    | otherwise = ""
+    IO String
+computedRow f res@(w, h) x y
+    | x < w = do
+        remaningPixels <- computedRow f res (x + 1) y
+        pure (putColor (f (x, y) (w, h)) ++ remaningPixels)
+    | otherwise = do
+        putStr ("Row " ++ show y ++ " of " ++ show h ++ " completed\r")
+        hFlush stdout
+        pure ""
 
 computedRows ::
     (Resolution -> ImageCoord -> Color) ->
     Resolution ->
     Integer ->
-    String
+    IO String
 computedRows f res@(_, h) y
-    | y < h = computedRow f res 0 y ++ computedRows f res (y + 1)
-    | otherwise = ""
+    | y < h = do
+        currentRow <- computedRow f res 0 y
+        otherRows <- computedRows f res (y + 1)
+        pure (currentRow ++ otherRows)
+    | otherwise = do
+        putStrLn ("Rendering finished all " ++ show h ++ " rows\n")
+        pure ""
 
 computedImage ::
     (Resolution -> ImageCoord -> Color) ->
     Resolution ->
-    String
+    IO String
 computedImage f res = computedRows f res 0
