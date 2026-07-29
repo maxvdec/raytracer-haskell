@@ -3,13 +3,13 @@ module Image where
 import Math
 
 ppmHeader :: Resolution -> String
-ppmHeader (width, height) = "P3\n" ++ (show width) ++ " " ++ (show height) ++ "\n255\n"
+ppmHeader (width, height) = "P3\n" ++ show width ++ " " ++ show height ++ "\n255\n"
 
 fillColorData :: NormalizedColor -> String
-fillColorData (r, g, b) = (show r) ++ " " ++ (show g) ++ " " ++ (show b)
+fillColorData (r, g, b) = show r ++ " " ++ show g ++ " " ++ show b
 
 putColor :: Color -> String
-putColor color = fillColorData (normalizeColor color) ++ "\n"
+putColor color = fillColorData ((normalizeColor . linearToGamma) color) ++ "\n"
 
 fillColorTotal :: Integer -> Color -> String
 fillColorTotal pixels color

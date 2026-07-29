@@ -30,6 +30,18 @@ normalizeColor (Vector3 r g b) =
     , floor (255.999 * clamp (0, 0.999) b)
     )
 
+linearToGamma :: Color -> Color
+linearToGamma (Vector3 r g b) =
+    Vector3 (mapToGamma r) (mapToGamma g) (mapToGamma b)
+  where
+    mapToGamma :: Float -> Float
+    mapToGamma linear =
+        if linear > 0
+            then
+                sqrt linear
+            else
+                0
+
 ratio :: Integer -> Integer -> Float
 ratio a b = fromIntegral a / (fromIntegral b - 1)
 
