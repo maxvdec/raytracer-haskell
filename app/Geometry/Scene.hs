@@ -1,6 +1,6 @@
 module Geometry.Scene where
 
-import Math (Point3, Resolution, TextureCoord, Vector3 (Vector3), (+.), (/.))
+import Math (Point3, Resolution, TextureCoord, Vector3 (Vector3), (+.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
 
@@ -34,6 +34,11 @@ calculateTopLeftPos cam =
     let camCenter = cameraCenter cam
         (viewportU, viewportV) = calculateUV cam
         (deltaU, deltaV) = calculateDeltaUV cam
-        focalLengthVector = (Vector3 0 0 (focalLength cam))
-        viewportUpperLeft = camCenter - focalLengthVector - (viewportU /. 2) - (viewportV /. 2)
-     in viewportUpperLeft +. 0.5 * (deltaU + deltaV)
+        focalVector = Vector3 0 0 (focalLength cam)
+
+        viewportUpperLeft =
+            camCenter
+                - focalVector
+                - viewportU /. 2
+                - viewportV /. 2
+     in viewportUpperLeft + 0.5 .* (deltaU + deltaV)

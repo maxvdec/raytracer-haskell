@@ -2,14 +2,19 @@
 
 module Math where
 
+import Data.Ord (clamp)
+
 type Resolution = (Integer, Integer)
-type Color = (Float, Float, Float)
 type ImageCoord = (Integer, Integer)
 type TextureCoord = (Float, Float)
 type NormalizedColor = (Integer, Integer, Integer)
 
 normalizeColor :: Color -> NormalizedColor
-normalizeColor (r, g, b) = (round (r * 255), round (g * 255), round (b * 255))
+normalizeColor (Vector3 r g b) =
+    ( floor (255.999 * clamp (0, 0.999) r)
+    , floor (255.999 * clamp (0, 0.999) g)
+    , floor (255.999 * clamp (0, 0.999) b)
+    )
 
 ratio :: Integer -> Integer -> Float
 ratio a b = fromIntegral a / ((fromIntegral b) - 1)
@@ -17,6 +22,16 @@ ratio a b = fromIntegral a / ((fromIntegral b) - 1)
 -- Vec 3 class
 data Vector3 = Vector3 Float Float Float deriving (Show, Eq)
 type Point3 = Vector3
+type Color = Vector3
+
+getX :: Vector3 -> Float
+getX (Vector3 a _ _) = a
+
+getY :: Vector3 -> Float
+getY (Vector3 _ a _) = a
+
+getZ :: Vector3 -> Float
+getZ (Vector3 _ _ a) = a
 
 instance Num Vector3 where
     (+) :: Vector3 -> Vector3 -> Vector3
@@ -25,7 +40,7 @@ instance Num Vector3 where
 
     (-) :: Vector3 -> Vector3 -> Vector3
     Vector3 ax ay az - Vector3 bx by bz =
-        Vector3 (ax - bx) (ay - by) (az + bz)
+        Vector3 (ax - bx) (ay - by) (az - bz)
 
     (*) :: Vector3 -> Vector3 -> Vector3
     Vector3 ax ay az * Vector3 bx by bz =
@@ -54,11 +69,11 @@ Vector3 x y z *. scalar =
 
 (./) :: Float -> Vector3 -> Vector3
 scalar ./ Vector3 x y z =
-    Vector3 (scalar / x) (scalar / y) (scalar / z)
+    Vector3 (x / scalar) (y / scalar) (z / scalar)
 
 (/.) :: Vector3 -> Float -> Vector3
 Vector3 x y z /. scalar =
-    Vector3 (scalar / x) (scalar / y) (scalar / z)
+    Vector3 (x / scalar) (y / scalar) (z / scalar)
 
 (.+) :: Float -> Vector3 -> Vector3
 scalar .+ Vector3 x y z =
