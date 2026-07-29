@@ -18,6 +18,7 @@ data Camera = Camera
     , cameraCenter :: Point3
     , resolution :: Resolution
     , samplesPerPixel :: Integer
+    , maxDepth :: Integer
     }
 
 calculateUV :: Camera -> (Vector3, Vector3)

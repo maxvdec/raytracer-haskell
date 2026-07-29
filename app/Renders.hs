@@ -1,7 +1,7 @@
 module Renders where
 
 import Geometry.Ray (Ray (Ray, direction, origin), at)
-import Geometry.Scene (Camera (samplesPerPixel), World, makeRayForCoordinate)
+import Geometry.Scene (Camera (maxDepth, samplesPerPixel), World, makeRayForCoordinate)
 import Geometry.Shapes (Hit (normal, p, t), Hittable (hit))
 import Image (putColor)
 import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
@@ -86,28 +86,29 @@ colorNormal :: Hit -> Color
 colorNormal h =
     0.5 .* (normal h + Vector3 1 1 1)
 
-colorGradient :: Hit -> World -> IO Color
-colorGradient h world = do
+colorGradient :: Hit -> World -> Integer -> IO Color
+colorGradient h world depth = do
     dir <- randomInHemisphere (normal h)
     let ray =
             Ray
                 { origin = p h
                 , direction = dir
                 }
-    bounces <- rayColor ray world
+    bounces <- rayColor ray world (depth - 1)
     pure (0.5 .* bounces)
 
-rayColor :: Ray -> World -> IO Color
-rayColor r world =
+rayColor :: Ray -> World -> Integer -> IO Color
+rayColor _ _ 0 = pure (Vector3 0 0 0)
+rayColor r world depth =
     let unitDirection = unit (direction r)
         a = 0.5 * getY unitDirection + 1.0
         hitResult = hit world r (0, infinity)
      in case hitResult of
             Just hitted -> do
-                colorGradient hitted world
+                colorGradient hitted world depth
             _ -> pure (((1.0 - a) .* Vector3 1 1 1) + (a .* Vector3 0.5 0.7 1))
 
 rayPass :: Camera -> World -> Resolution -> ImageCoord -> IO Color
 rayPass cam world _ (x, y) = do
     ray <- makeRayForCoordinate cam x y
-    rayColor ray world
+    rayColor ray world (maxDepth cam)

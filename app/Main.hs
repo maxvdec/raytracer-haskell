@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, resolution, samplesPerPixel, viewportResolution), World (World, hittables), createViewportResolutionFromHeight)
+import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, maxDepth, resolution, samplesPerPixel, viewportResolution), World (World, hittables), createViewportResolutionFromHeight)
 import Geometry.Shapes
 import Image
 import Math (Color, ImageCoord, Resolution, Vector3 (Vector3))
@@ -29,6 +29,7 @@ main =
                 , cameraCenter = Vector3 0 0 0
                 , resolution = devResolution
                 , samplesPerPixel = 100
+                , maxDepth = 50
                 }
      in do
             writeFile "./output.ppm" (Image.ppmHeader devResolution)
