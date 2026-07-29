@@ -17,4 +17,4 @@ fillColorTotal pixels color
     | otherwise = putColor color ++ fillColorTotal (pixels - 1) color
 
 fillColor :: Resolution -> Color -> String
-fillColor (w, h) color = fillColorTotal (w * h) color
+fillColor (w, h) = fillColorTotal (w * h)

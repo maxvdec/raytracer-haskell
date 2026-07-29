@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, resolution, viewportResolution), World (World, hittables), createViewportResolutionFromHeight)
+import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, resolution, samplesPerPixel, viewportResolution), World (World, hittables), createViewportResolutionFromHeight)
 import Geometry.Shapes
 import Image
 import Math (Color, ImageCoord, Resolution, Vector3 (Vector3))
@@ -25,11 +25,12 @@ main =
     let camera =
             Camera
                 { focalLength = 1.0
-                , viewportResolution = (createViewportResolutionFromHeight 2.0 devResolution)
-                , cameraCenter = (Vector3 0 0 0)
+                , viewportResolution = createViewportResolutionFromHeight 2.0 devResolution
+                , cameraCenter = Vector3 0 0 0
                 , resolution = devResolution
+                , samplesPerPixel = 10
                 }
      in do
             writeFile "./output.ppm" (Image.ppmHeader devResolution)
-            computation <- Renders.computedImage (rayPass camera makeWorld) devResolution
+            computation <- Renders.computedImage (rayPass camera makeWorld) devResolution camera
             appendFile "./output.ppm" computation

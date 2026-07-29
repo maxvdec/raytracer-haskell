@@ -16,12 +16,12 @@ data Hit = Hit
 
 setFaceNormal :: Hit -> Ray -> Vector3 -> Hit
 setFaceNormal h r outward =
-    let frontFace = (dot (direction r) outward) < 0
+    let frontFace = dot (direction r) outward < 0
         normalResult = if frontFace then outward else -outward
      in Hit
-            { p = (p h)
+            { p = p h
             , normal = normalResult
-            , t = (t h)
+            , t = t h
             , isFront = frontFace
             }
 
@@ -32,8 +32,7 @@ data SomeHittable = forall a. (Hittable a) => SomeHittable a
 
 instance Hittable SomeHittable where
     hit :: SomeHittable -> Ray -> Interval -> Maybe Hit
-    hit (SomeHittable obj) ray interval =
-        hit obj ray interval
+    hit (SomeHittable obj) = hit obj
 
 data Sphere = Sphere
     { center :: Point3

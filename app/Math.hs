@@ -3,6 +3,7 @@
 module Math where
 
 import Data.Ord (clamp)
+import System.Random (randomRIO)
 
 type Resolution = (Integer, Integer)
 type ImageCoord = (Integer, Integer)
@@ -14,6 +15,14 @@ contains :: Interval -> Float -> Bool
 contains (minimumValue, maximumValue) value =
     value > minimumValue && value < maximumValue
 
+sizeOfInterval :: Interval -> Float
+sizeOfInterval (min, max) =
+    max - min
+
+surrounds :: Interval -> Float -> Bool
+surrounds (min, max) val =
+    min < val && max > val
+
 normalizeColor :: Color -> NormalizedColor
 normalizeColor (Vector3 r g b) =
     ( floor (255.999 * clamp (0, 0.999) r)
@@ -22,7 +31,7 @@ normalizeColor (Vector3 r g b) =
     )
 
 ratio :: Integer -> Integer -> Float
-ratio a b = fromIntegral a / ((fromIntegral b) - 1)
+ratio a b = fromIntegral a / (fromIntegral b - 1)
 
 -- Vec 3 class
 data Vector3 = Vector3 Float Float Float deriving (Show, Eq)
@@ -114,7 +123,14 @@ vecLength :: Vector3 -> Float
 vecLength vec = sqrt (lengthSquared vec)
 
 unit :: Vector3 -> Vector3
-unit vec = vec /. (vecLength vec)
+unit vec = vec /. vecLength vec
 
 infinity :: Float
 infinity = 1 / 0
+
+randomFloat :: IO Float
+randomFloat = randomRIO (0.0, 1.0)
+
+randomInRange :: Interval -> IO Float
+randomInRange = randomRIO
+
