@@ -125,6 +125,34 @@ vecLength vec = sqrt (lengthSquared vec)
 unit :: Vector3 -> Vector3
 unit vec = vec /. vecLength vec
 
+randomVector :: IO Vector3
+randomVector = do
+    Vector3 <$> randomFloat <*> randomFloat <*> randomFloat
+
+randomVectorInRange :: Interval -> IO Vector3
+randomVectorInRange interval = do
+    Vector3 <$> randomInRange interval <*> randomInRange interval <*> randomInRange interval
+
+randomUnitVector :: IO Vector3
+randomUnitVector = do
+    p <- randomVectorInRange (-1, 1)
+    let lensq = lengthSquared p
+    if lensq >= 1 || lensq < 1e-126
+        then
+            randomUnitVector
+        else
+            pure (unit p)
+
+randomInHemisphere :: Vector3 -> IO Vector3
+randomInHemisphere normal = do
+    onUnitSphere <- randomUnitVector
+    let dotProduct = dot onUnitSphere normal
+    if dotProduct > 0.0
+        then
+            pure onUnitSphere
+        else
+            pure (negate onUnitSphere)
+
 infinity :: Float
 infinity = 1 / 0
 

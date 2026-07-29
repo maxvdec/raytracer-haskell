@@ -28,7 +28,7 @@ main =
                 , viewportResolution = createViewportResolutionFromHeight 2.0 devResolution
                 , cameraCenter = Vector3 0 0 0
                 , resolution = devResolution
-                , samplesPerPixel = 10
+                , samplesPerPixel = 100
                 }
      in do
             writeFile "./output.ppm" (Image.ppmHeader devResolution)

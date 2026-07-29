@@ -1,10 +1,10 @@
 module Renders where
 
-import Geometry.Ray (Ray (direction), at)
+import Geometry.Ray (Ray (Ray, direction, origin), at)
 import Geometry.Scene (Camera (samplesPerPixel), World, makeRayForCoordinate)
-import Geometry.Shapes (Hit (normal, t), Hittable (hit))
+import Geometry.Shapes (Hit (normal, p, t), Hittable (hit))
 import Image (putColor)
-import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, normalizeColor, ratio, unit, (*.), (.*), (/.))
+import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
 import System.IO (hFlush, stdout)
 
 -- UV Render
@@ -86,16 +86,28 @@ colorNormal :: Hit -> Color
 colorNormal h =
     0.5 .* (normal h + Vector3 1 1 1)
 
-rayColor :: Ray -> World -> Color
+colorGradient :: Hit -> World -> IO Color
+colorGradient h world = do
+    dir <- randomInHemisphere (normal h)
+    let ray =
+            Ray
+                { origin = p h
+                , direction = dir
+                }
+    bounces <- rayColor ray world
+    pure (0.5 .* bounces)
+
+rayColor :: Ray -> World -> IO Color
 rayColor r world =
     let unitDirection = unit (direction r)
         a = 0.5 * getY unitDirection + 1.0
         hitResult = hit world r (0, infinity)
      in case hitResult of
-            Just hitted -> colorNormal hitted
-            _ -> ((1.0 - a) .* Vector3 1 1 1) + (a .* Vector3 0.5 0.7 1)
+            Just hitted -> do
+                colorGradient hitted world
+            _ -> pure (((1.0 - a) .* Vector3 1 1 1) + (a .* Vector3 0.5 0.7 1))
 
 rayPass :: Camera -> World -> Resolution -> ImageCoord -> IO Color
 rayPass cam world _ (x, y) = do
     ray <- makeRayForCoordinate cam x y
-    pure (rayColor ray world)
+    rayColor ray world
