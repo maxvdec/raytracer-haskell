@@ -102,11 +102,11 @@ cross (Vector3 ax ay az) (Vector3 bx by bz) =
         z = ax * by - ay * bx
      in Vector3 x y z
 
-length_squared :: Vector3 -> Float
-length_squared (Vector3 x y z) = (x * x) + (y * y) + (z * z)
+lengthSquared :: Vector3 -> Float
+lengthSquared (Vector3 x y z) = (x * x) + (y * y) + (z * z)
 
 vecLength :: Vector3 -> Float
-vecLength vec = sqrt (length_squared vec)
+vecLength vec = sqrt (lengthSquared vec)
 
 unit :: Vector3 -> Vector3
 unit vec = vec /. (vecLength vec)
