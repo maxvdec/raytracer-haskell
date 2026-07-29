@@ -92,7 +92,7 @@ colorGradient h world depth = do
     let ray =
             Ray
                 { origin = p h
-                , direction = dir
+                , direction = dir + normal h
                 }
     bounces <- rayColor ray world (depth - 1)
     pure (0.5 .* bounces)
