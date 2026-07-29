@@ -102,7 +102,7 @@ rayColor _ _ 0 = pure (Vector3 0 0 0)
 rayColor r world depth =
     let unitDirection = unit (direction r)
         a = 0.5 * getY unitDirection + 1.0
-        hitResult = hit world r (0, infinity)
+        hitResult = hit world r (0.001, infinity)
      in case hitResult of
             Just hitted -> do
                 colorGradient hitted world depth
