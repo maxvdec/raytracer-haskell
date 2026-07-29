@@ -8,6 +8,11 @@ type Resolution = (Integer, Integer)
 type ImageCoord = (Integer, Integer)
 type TextureCoord = (Float, Float)
 type NormalizedColor = (Integer, Integer, Integer)
+type Interval = (Float, Float)
+
+contains :: Interval -> Float -> Bool
+contains (minimumValue, maximumValue) value =
+    value > minimumValue && value < maximumValue
 
 normalizeColor :: Color -> NormalizedColor
 normalizeColor (Vector3 r g b) =
@@ -110,3 +115,6 @@ vecLength vec = sqrt (lengthSquared vec)
 
 unit :: Vector3 -> Vector3
 unit vec = vec /. (vecLength vec)
+
+infinity :: Float
+infinity = 1 / 0

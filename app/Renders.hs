@@ -1,10 +1,10 @@
 module Renders where
 
-import Geometry.Ray (Ray (direction), at, makeRayForCoordinate)
-import Geometry.Scene (Camera)
-import Geometry.Shapes (hitSphere)
+import Geometry.Ray (Ray (direction), at)
+import Geometry.Scene (Camera, World, makeRayForCoordinate)
+import Geometry.Shapes (Hit (normal, t), Hittable (hit))
 import Image (putColor)
-import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getX, getY, getZ, normalizeColor, ratio, unit, (*.), (.*))
+import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, normalizeColor, ratio, unit, (*.), (.*))
 import System.IO (hFlush, stdout)
 
 -- UV Render
@@ -64,24 +64,20 @@ computedImage ::
     IO String
 computedImage f res = computedRows f res 0
 
-colorNormal :: Float -> Ray -> Color
-colorNormal t r
-    | t < 0 = (Vector3 0 0 0)
-    | otherwise =
-        let n = unit ((at r t) - (Vector3 0 0 (-1)))
-         in 0.5 .* (Vector3 ((getX n) + 1) ((getY n) + 1) ((getZ n) + 1))
+colorNormal :: Hit -> Color
+colorNormal h =
+    0.5 .* ((normal h) + (Vector3 1 1 1))
 
-rayColor :: Ray -> Color
-rayColor r =
+rayColor :: Ray -> World -> Color
+rayColor r world =
     let unitDirection = unit (direction r)
         a = 0.5 * ((getY unitDirection) + 1.0)
-        t = hitSphere (Vector3 0.0 0.0 (-1.0)) 0.5 r
-     in if t > 0
-            then
-                colorNormal t r
-            else ((1.0 - a) .* (Vector3 1 1 1)) + (a .* (Vector3 0.5 0.7 1))
+        hitResult = hit world r (0, infinity)
+     in case hitResult of
+            Just hitted -> colorNormal hitted
+            _ -> ((1.0 - a) .* (Vector3 1 1 1)) + (a .* (Vector3 0.5 0.7 1))
 
-rayPass :: Camera -> Resolution -> ImageCoord -> Color
-rayPass cam _ (x, y) =
+rayPass :: Camera -> World -> Resolution -> ImageCoord -> Color
+rayPass cam world _ (x, y) =
     let ray = (makeRayForCoordinate cam x y)
-     in rayColor ray
+     in rayColor ray world
