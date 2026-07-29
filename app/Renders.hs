@@ -2,6 +2,7 @@ module Renders where
 
 import Geometry.Ray (Ray (direction), makeRayForCoordinate)
 import Geometry.Scene (Camera)
+import Geometry.Shapes (hitSphere)
 import Image (putColor)
 import Math (Color, ImageCoord, Resolution, Vector3 (Vector3), getY, normalizeColor, ratio, unit, (*.), (.*))
 import System.IO (hFlush, stdout)
@@ -67,7 +68,11 @@ rayColor :: Ray -> Color
 rayColor r =
     let unitDirection = unit (direction r)
         a = 0.5 * ((getY unitDirection) + 1.0)
-     in ((1.0 - a) .* (Vector3 1 1 1)) + (a .* (Vector3 0.5 0.7 1))
+        sphereHit = hitSphere (Vector3 0.0 0.0 (-1.0)) 0.5 r
+     in if sphereHit
+            then
+                (Vector3 1.0 0.0 0.0)
+            else ((1.0 - a) .* (Vector3 1 1 1)) + (a .* (Vector3 0.5 0.7 1))
 
 rayPass :: Camera -> Resolution -> ImageCoord -> Color
 rayPass cam _ (x, y) =
