@@ -6,12 +6,12 @@ module Geometry.Shapes where
 import Control.Applicative
 import GHC.Float (roundFloat)
 import Geometry.Hit (Hit (..), Hittable (hit), makeHit, setFaceNormal)
-import Geometry.Ray (Ray (direction, origin), at)
+import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
 import Materials (SomeMaterial)
-import Math (Interval, Point3, Vector3, contains, dot, lengthSquared, (.*), (.-), (/.))
+import Math (Interval, Point3, Vector3 (Vector3), contains, dot, lengthSquared, (.*), (.-), (/.))
 
 data Sphere = Sphere
-    { center :: Point3
+    { center :: Ray 
     , radius :: Float
     , sphereMaterial :: SomeMaterial
     }
@@ -19,10 +19,18 @@ data Sphere = Sphere
 makeSphere :: Point3 -> Float -> SomeMaterial -> Sphere
 makeSphere c r mat =
     Sphere
-        { center = c
+        { center = makeRay c (Vector3 0 0 0) 
         , radius = r
         , sphereMaterial = mat
         }
+
+makeAnimatedSphere :: Point3 -> Point3 -> Float -> SomeMaterial -> Sphere
+makeAnimatedSphere a b r mat =
+    Sphere {
+        center = makeRay a (b - a)
+        , radius = r
+        , sphereMaterial = mat
+    }
 
 instance Hittable Sphere where
     hit :: Sphere -> Ray -> Interval -> Maybe Hit
@@ -32,7 +40,8 @@ instance Hittable Sphere where
             findHit firstRoot
                 <|> findHit secondRoot
       where
-        oc = center sphere - origin ray
+        currentCenter = at (center sphere) (time ray)
+        oc = currentCenter - origin ray
         directionLengthSquared = lengthSquared (direction ray)
         halfB = dot (direction ray) oc
         c = lengthSquared oc - radius sphere * radius sphere
@@ -53,7 +62,7 @@ instance Hittable Sphere where
             | otherwise =
                 let hitPoint = at ray root
                     outwardNormal =
-                        (hitPoint - center sphere) /. radius sphere
+                        (hitPoint - currentCenter) /. radius sphere
 
                     initialHit =
                         makeHit

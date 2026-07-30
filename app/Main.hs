@@ -25,7 +25,7 @@ makeWorld =
         materialLeft = makeDielectric (1.0 / 1.33)
         materialRight = makeMetal (Vector3 0.8 0.6 0.2) 1.0
         groundSphere = makeSphere (Vector3 0 (-100.5) (-1)) 100 (SomeMaterial materialGround)
-        centerSphere = makeSphere (Vector3 0 0 (-1.2)) 0.5 (SomeMaterial materialCenter)
+        centerSphere = makeAnimatedSphere (Vector3 0 0 (-1.2)) (Vector3 0 1.5 (-1.2)) 0.5 (SomeMaterial materialCenter)
         leftSphere = makeSphere (Vector3 (-1) 0 (-1)) 0.5 (SomeMaterial materialLeft)
         rightSphere = makeSphere (Vector3 1 0 (-1)) 0.5 (SomeMaterial materialRight)
      in World

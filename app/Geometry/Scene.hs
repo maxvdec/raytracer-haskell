@@ -3,8 +3,8 @@
 module Geometry.Scene where
 
 import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
-import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk)
+import Geometry.Ray (Ray (Ray, direction, origin, time))
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk, randomFloat)
 
 type ViewportResolution = (Float, Float)
 
@@ -88,12 +88,14 @@ makeRayForCoordinate generator cam x y =
      in do
             offset <- sampleSquare
             randomUnit <- defocusDiskSample generator
+            rayTime <- randomFloat generator
             let sampleLoc = pixel0Pos + ((fromInteger x + getX offset) .* deltaU) + ((fromInteger y + getY offset) .* deltaV)
             let rayOrigin = if (defocusAngle cam) <= 0 then camCenter else randomUnit
             pure
                 ( Ray
                     { origin = rayOrigin 
                     , direction = sampleLoc - rayOrigin 
+                    , time = rayTime
                     }
                 )
   where

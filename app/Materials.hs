@@ -5,7 +5,7 @@ module Materials where
 
 import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (normal, p, isFront))
-import Geometry.Ray (Ray (Ray, direction, origin))
+import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Math (Color, RandomGenerator, nearZero, randomUnitVector, reflect, unit, (.*), dot, Vector3(..), refract, randomFloat)
 import Data.Ord (clamp)
 
@@ -22,7 +22,7 @@ newtype Lambertian = Lambertian {lambertianAlbedo :: Color}
 
 instance Material Lambertian where
     scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
-    scatter mat generator _ hitted = do
+    scatter mat generator r hitted = do
         randomUnit <- randomUnitVector generator
         let scatterDirection = normal hitted + randomUnit
         if nearZero scatterDirection
@@ -31,6 +31,7 @@ instance Material Lambertian where
                         Ray
                             { origin = p hitted
                             , direction = normal hitted
+                            , time = (time r)
                             }
                 pure (Just (lambertianAlbedo mat, scattered))
             else do
@@ -38,6 +39,7 @@ instance Material Lambertian where
                         Ray
                             { origin = p hitted
                             , direction = scatterDirection
+                            , time = (time r)
                             }
                 pure (Just (lambertianAlbedo mat, scattered))
 
@@ -59,6 +61,7 @@ instance Material Metal where
                 Ray
                     { origin = p hitted
                     , direction = fuzzedReflected 
+                    , time = (time ray)
                     }
         let check = (dot (direction scattered) (normal hitted)) > 0
         if check then
@@ -101,6 +104,7 @@ instance Material Dielectric where
         let scattered = Ray {
             origin = (p hitted)
             , direction = scatterDirection 
+            , time = (time ray)
         }
         pure (Just (attenuation, scattered))
 
