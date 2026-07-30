@@ -4,47 +4,24 @@
 module Geometry.Shapes where
 
 import Control.Applicative
+import GHC.Float (roundFloat)
+import Geometry.Hit (Hit (..), Hittable (hit), makeHit, setFaceNormal)
 import Geometry.Ray (Ray (direction, origin), at)
+import Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3, contains, dot, lengthSquared, (.*), (.-), (/.))
-
-data Hit = Hit
-    { p :: Point3
-    , normal :: Vector3
-    , t :: Float
-    , isFront :: Bool
-    }
-
-setFaceNormal :: Hit -> Ray -> Vector3 -> Hit
-setFaceNormal h r outward =
-    let frontFace = dot (direction r) outward < 0
-        normalResult = if frontFace then outward else -outward
-     in Hit
-            { p = p h
-            , normal = normalResult
-            , t = t h
-            , isFront = frontFace
-            }
-
-class Hittable a where
-    hit :: a -> Ray -> Interval -> Maybe Hit
-
-data SomeHittable = forall a. (Hittable a) => SomeHittable a
-
-instance Hittable SomeHittable where
-    hit :: SomeHittable -> Ray -> Interval -> Maybe Hit
-    hit (SomeHittable obj) = hit obj
 
 data Sphere = Sphere
     { center :: Point3
     , radius :: Float
+    , sphereMaterial :: SomeMaterial
     }
-    deriving (Eq)
 
-makeSphere :: Point3 -> Float -> Sphere
-makeSphere c r =
+makeSphere :: Point3 -> Float -> SomeMaterial -> Sphere
+makeSphere c r mat =
     Sphere
         { center = c
         , radius = r
+        , sphereMaterial = mat
         }
 
 instance Hittable Sphere where
@@ -79,10 +56,10 @@ instance Hittable Sphere where
                         (hitPoint - center sphere) /. radius sphere
 
                     initialHit =
-                        Hit
-                            { p = hitPoint
-                            , normal = outwardNormal
-                            , t = root
-                            , isFront = False
-                            }
+                        makeHit
+                            hitPoint
+                            outwardNormal
+                            root
+                            False
+                            (sphereMaterial sphere)
                  in Just (setFaceNormal initialHit ray outwardNormal)

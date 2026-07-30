@@ -65,6 +65,9 @@ executable raytracer
         Geometry.Ray
         Geometry.Scene
         Geometry.Shapes
+        Materials
+        Geometry.Hit
+        Geometry.HitInfo
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

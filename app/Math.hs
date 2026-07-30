@@ -117,6 +117,19 @@ scalar .- Vector3 x y z =
 Vector3 x y z -. scalar =
     Vector3 (scalar - x) (scalar - y) (scalar - z)
 
+nearZero :: Vector3 -> Bool
+nearZero (Vector3 x y z) =
+    isNearZero x && isNearZero y && isNearZero z
+  where
+    isNearZero :: Float -> Bool
+    isNearZero val =
+        let e = 1e-8
+         in abs val < e
+
+reflect :: Vector3 -> Vector3 -> Vector3
+reflect v n =
+    v - 2 * dot v n .* n
+
 dot :: Vector3 -> Vector3 -> Float
 dot (Vector3 ax ay az) (Vector3 bx by bz) =
     (ax * bx) + (ay * by) + (az * bz)
@@ -173,4 +186,3 @@ randomFloat = randomRIO (0.0, 1.0)
 
 randomInRange :: Interval -> IO Float
 randomInRange = randomRIO
-

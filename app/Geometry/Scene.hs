@@ -2,8 +2,8 @@
 
 module Geometry.Scene where
 
+import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Geometry.Shapes (Hit (t), Hittable (hit), SomeHittable)
 import Math (Interval, Point3, Resolution, TextureCoord, Vector3 (Vector3), getX, getY, randomFloat, randomInRange, (+.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
@@ -89,7 +89,7 @@ getClosestHit (World (object : rest)) r interval closestRay closestSoFar =
         Nothing ->
             getClosestHit (World rest) r interval closestRay closestSoFar
         Just result ->
-            getClosestHit (World rest) r interval (Just result) (t result)
+            getClosestHit (World rest) r interval (Just result) (hitT result)
 
 instance Hittable World where
     hit :: World -> Ray -> Interval -> Maybe Hit
