@@ -3,13 +3,18 @@
 module Math where
 
 import Data.Ord (clamp)
-import System.Random (randomRIO)
+import System.Random (StdGen, newStdGen)
+import System.Random.Stateful (IOGenM, newIOGenM, uniformRM)
 
 type Resolution = (Integer, Integer)
 type ImageCoord = (Integer, Integer)
 type TextureCoord = (Float, Float)
 type NormalizedColor = (Integer, Integer, Integer)
 type Interval = (Float, Float)
+type RandomGenerator = IOGenM StdGen
+
+makeRandomGenerator :: IO RandomGenerator
+makeRandomGenerator = newStdGen >>= newIOGenM
 
 contains :: Interval -> Float -> Bool
 contains (minimumValue, maximumValue) value =
@@ -46,7 +51,7 @@ ratio :: Integer -> Integer -> Float
 ratio a b = fromIntegral a / (fromIntegral b - 1)
 
 -- Vec 3 class
-data Vector3 = Vector3 Float Float Float deriving (Show, Eq)
+data Vector3 = Vector3 !Float !Float !Float deriving (Show, Eq)
 type Point3 = Vector3
 type Color = Vector3
 
@@ -130,6 +135,13 @@ reflect :: Vector3 -> Vector3 -> Vector3
 reflect v n =
     v - 2 * dot v n .* n
 
+refract :: Vector3 -> Vector3 -> Float -> Vector3
+refract uv n etaiOverEtat =
+    let cosTheta = min (dot (-uv) n) 1.0
+        rOutPrep = etaiOverEtat .* (uv + (cosTheta .* n))
+        rOutParallel = (-sqrt (abs (1.0 - (lengthSquared rOutPrep)))) .* n in
+    rOutPrep + rOutParallel
+
 dot :: Vector3 -> Vector3 -> Float
 dot (Vector3 ax ay az) (Vector3 bx by bz) =
     (ax * bx) + (ay * by) + (az * bz)
@@ -150,27 +162,27 @@ vecLength vec = sqrt (lengthSquared vec)
 unit :: Vector3 -> Vector3
 unit vec = vec /. vecLength vec
 
-randomVector :: IO Vector3
-randomVector = do
-    Vector3 <$> randomFloat <*> randomFloat <*> randomFloat
+randomVector :: RandomGenerator -> IO Vector3
+randomVector generator = do
+    Vector3 <$> randomFloat generator <*> randomFloat generator <*> randomFloat generator
 
-randomVectorInRange :: Interval -> IO Vector3
-randomVectorInRange interval = do
-    Vector3 <$> randomInRange interval <*> randomInRange interval <*> randomInRange interval
+randomVectorInRange :: RandomGenerator -> Interval -> IO Vector3
+randomVectorInRange generator interval = do
+    Vector3 <$> randomInRange generator interval <*> randomInRange generator interval <*> randomInRange generator interval
 
-randomUnitVector :: IO Vector3
-randomUnitVector = do
-    p <- randomVectorInRange (-1, 1)
+randomUnitVector :: RandomGenerator -> IO Vector3
+randomUnitVector generator = do
+    p <- randomVectorInRange generator (-1, 1)
     let lensq = lengthSquared p
     if lensq >= 1 || lensq < 1e-126
         then
-            randomUnitVector
+            randomUnitVector generator
         else
             pure (unit p)
 
-randomInHemisphere :: Vector3 -> IO Vector3
-randomInHemisphere normal = do
-    onUnitSphere <- randomUnitVector
+randomInHemisphere :: RandomGenerator -> Vector3 -> IO Vector3
+randomInHemisphere generator normal = do
+    onUnitSphere <- randomUnitVector generator
     let dotProduct = dot onUnitSphere normal
     if dotProduct > 0.0
         then
@@ -181,8 +193,8 @@ randomInHemisphere normal = do
 infinity :: Float
 infinity = 1 / 0
 
-randomFloat :: IO Float
-randomFloat = randomRIO (0.0, 1.0)
+randomFloat :: RandomGenerator -> IO Float
+randomFloat generator = uniformRM (0.0, 1.0) generator
 
-randomInRange :: Interval -> IO Float
-randomInRange = randomRIO
+randomInRange :: RandomGenerator -> Interval -> IO Float
+randomInRange generator interval = uniformRM interval generator

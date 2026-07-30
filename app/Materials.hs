@@ -4,26 +4,26 @@
 module Materials where
 
 import GHC.Generics (Meta)
-import Geometry.HitInfo (HitInfo (normal, p))
+import Geometry.HitInfo (HitInfo (normal, p, isFront))
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Color, nearZero, randomUnitVector, reflect, unit, (.*), dot)
+import Math (Color, RandomGenerator, nearZero, randomUnitVector, reflect, unit, (.*), dot, Vector3(..), refract)
 import Data.Ord (clamp)
 
 class Material a where
-    scatter :: a -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
 
 data SomeMaterial = forall a. (Material a) => SomeMaterial a
 
 instance Material SomeMaterial where
-    scatter :: SomeMaterial -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter (SomeMaterial mat) = scatter mat
 
 newtype Lambertian = Lambertian {lambertianAlbedo :: Color}
 
 instance Material Lambertian where
-    scatter :: Lambertian -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
-    scatter mat _ hitted = do
-        randomUnit <- randomUnitVector
+    scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter mat generator _ hitted = do
+        randomUnit <- randomUnitVector generator
         let scatterDirection = normal hitted + randomUnit
         if nearZero scatterDirection
             then do
@@ -50,10 +50,10 @@ makeLambertian col =
 data Metal = Metal {metalAlbedo :: Color, fuzz :: Float}
 
 instance Material Metal where
-    scatter :: Metal -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
-    scatter mat ray hitted = do
+    scatter :: Metal -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter mat generator ray hitted = do
         let reflected = reflect (direction ray) (normal hitted)
-        randomFuzzUnitVector <- randomUnitVector
+        randomFuzzUnitVector <- randomUnitVector generator
         let fuzzedReflected = (unit reflected) + ((fuzz mat) .* randomFuzzUnitVector)
         let scattered =
                 Ray
@@ -73,3 +73,25 @@ makeMetal col fuz =
         { metalAlbedo = col
         , fuzz = clampedFuzz
         }
+
+data Dielectric = Dielectric { refractionIndex :: Float }
+
+instance Material Dielectric where
+    scatter :: Dielectric -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter mat _ ray hitted = do
+        let attenuation = (Vector3 1 1 1)
+        let ri = if (isFront hitted) then 1.0 / (refractionIndex mat) else (refractionIndex mat)
+
+        let unitDirection = unit (direction ray)
+        let refracted = refract unitDirection (normal hitted) ri
+        let scattered = Ray {
+            origin = (p hitted)
+            , direction = refracted
+        }
+        pure (Just (attenuation, scattered))
+
+makeDielectric :: Float -> Dielectric
+makeDielectric refr =
+    Dielectric {
+        refractionIndex = refr
+    }

@@ -4,7 +4,7 @@ module Geometry.Scene where
 
 import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Interval, Point3, Resolution, TextureCoord, Vector3 (Vector3), getX, getY, randomFloat, randomInRange, (+.), (.*), (/.))
+import Math (Interval, Point3, RandomGenerator, Resolution, TextureCoord, Vector3 (Vector3), getX, getY, randomFloat, randomInRange, (+.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
 
@@ -49,8 +49,8 @@ calculateTopLeftPos cam =
                 - viewportV /. 2
      in viewportUpperLeft + 0.5 .* (deltaU + deltaV)
 
-makeRayForCoordinate :: Camera -> Integer -> Integer -> IO Ray
-makeRayForCoordinate cam x y =
+makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ray
+makeRayForCoordinate generator cam x y =
     let (deltaU, deltaV) = calculateDeltaUV cam
         pixel0Pos = calculateTopLeftPos cam
         camCenter = cameraCenter cam
@@ -66,8 +66,8 @@ makeRayForCoordinate cam x y =
   where
     sampleSquare :: IO Vector3
     sampleSquare = do
-        xOffset <- randomInRange (-0.5, 0.5)
-        yOffset <- randomInRange (-0.5, 0.5)
+        xOffset <- randomInRange generator (-0.5, 0.5)
+        yOffset <- randomInRange generator (-0.5, 0.5)
 
         pure (Vector3 xOffset yOffset 0)
 
