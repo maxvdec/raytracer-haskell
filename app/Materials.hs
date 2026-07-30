@@ -6,7 +6,7 @@ module Materials where
 import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (normal, p, isFront))
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Color, RandomGenerator, nearZero, randomUnitVector, reflect, unit, (.*), dot, Vector3(..), refract)
+import Math (Color, RandomGenerator, nearZero, randomUnitVector, reflect, unit, (.*), dot, Vector3(..), refract, randomFloat)
 import Data.Ord (clamp)
 
 class Material a where
@@ -76,9 +76,19 @@ makeMetal col fuz =
 
 data Dielectric = Dielectric { refractionIndex :: Float }
 
+reflectance :: Dielectric -> Float -> Float
+reflectance mat cosine =
+    let refIndex = refractionIndex mat 
+        r0 = ((1 - refIndex) / (1 + refIndex)) ^ (2 :: Integer)
+    in
+    r0 + (1 - r0) * ((1 - cosine) ^ (5 :: Integer))
+    
+
 instance Material Dielectric where
     scatter :: Dielectric -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
-    scatter mat _ ray hitted = do
+    scatter mat rgen ray hitted = do
+        randomSchlick <- randomFloat rgen
+        
         let attenuation = (Vector3 1 1 1)
         let ri = if (isFront hitted) then 1.0 / (refractionIndex mat) else (refractionIndex mat)
 
@@ -86,7 +96,8 @@ instance Material Dielectric where
         let cosTheta = min (dot (-unitDirection) (normal hitted)) 1.0
         let sinTheta = sqrt (1.0 - cosTheta * cosTheta)
         let cannotRefract = (ri * sinTheta) > 1.0
-        let scatterDirection = if cannotRefract then reflect unitDirection (normal hitted) else refract unitDirection (normal hitted) ri
+        let schlickParameter = (reflectance mat cosTheta) > randomSchlick
+        let scatterDirection = if (cannotRefract || schlickParameter) then reflect unitDirection (normal hitted) else refract unitDirection (normal hitted) ri
         let scattered = Ray {
             origin = (p hitted)
             , direction = scatterDirection 
