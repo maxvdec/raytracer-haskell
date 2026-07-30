@@ -83,10 +83,13 @@ instance Material Dielectric where
         let ri = if (isFront hitted) then 1.0 / (refractionIndex mat) else (refractionIndex mat)
 
         let unitDirection = unit (direction ray)
-        let refracted = refract unitDirection (normal hitted) ri
+        let cosTheta = min (dot (-unitDirection) (normal hitted)) 1.0
+        let sinTheta = sqrt (1.0 - cosTheta * cosTheta)
+        let cannotRefract = (ri * sinTheta) > 1.0
+        let scatterDirection = if cannotRefract then reflect unitDirection (normal hitted) else refract unitDirection (normal hitted) ri
         let scattered = Ray {
             origin = (p hitted)
-            , direction = refracted
+            , direction = scatterDirection 
         }
         pure (Just (attenuation, scattered))
 

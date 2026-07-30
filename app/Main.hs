@@ -22,7 +22,7 @@ makeWorld :: World
 makeWorld =
     let materialGround = makeLambertian (Vector3 0.8 0.8 0)
         materialCenter = makeLambertian (Vector3 0.1 0.2 0.5)
-        materialLeft = makeDielectric 1.5 
+        materialLeft = makeDielectric (1.0 / 1.33)
         materialRight = makeMetal (Vector3 0.8 0.6 0.2) 1.0
         groundSphere = makeSphere (Vector3 0 (-100.5) (-1)) 100 (SomeMaterial materialGround)
         centerSphere = makeSphere (Vector3 0 0 (-1.2)) 0.5 (SomeMaterial materialCenter)
