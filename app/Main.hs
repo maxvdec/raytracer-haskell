@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Geometry.Hit (SomeHittable (SomeHittable))
-import Geometry.Scene (Camera (Camera, maxDepth, resolution, samplesPerPixel, viewportResolution, fov, lookat, lookfrom, vup), World (World, hittables), fillViewportResolution)
+import Geometry.Scene (Camera (Camera, maxDepth, resolution, samplesPerPixel, viewportResolution, fov, lookat, lookfrom, vup, defocusAngle, focusDist, defocusDiskU, defocusDiskV), World (World, hittables), fillViewportResolution, fillDiskInfo)
 import Geometry.Shapes
 import Image
 import Materials (SomeMaterial (SomeMaterial), makeLambertian, makeMetal, makeDielectric)
@@ -40,11 +40,15 @@ main =
                 , resolution = mediumResolution
                 , samplesPerPixel = 100
                 , maxDepth = 50
-                , fov = 90
+                , fov = 20
                 , lookfrom = (Vector3 (-2) 2 1)
                 , lookat = (Vector3 0 0 (-1))
                 , vup = (Vector3 0 1 0)
-                } |> fillViewportResolution
+                , defocusAngle = 10
+                , focusDist = 3.4
+                , defocusDiskU = (Vector3 0 0 0)
+                , defocusDiskV = (Vector3 0 0 0)
+                } |> fillViewportResolution |> fillDiskInfo 
      in withFile "./output.ppm" WriteMode $ \handle -> do
             hPutStr handle (ppmHeader mediumResolution)
             computedImage

@@ -205,3 +205,13 @@ randomFloat generator = uniformRM (0.0, 1.0) generator
 
 randomInRange :: RandomGenerator -> Interval -> IO Float
 randomInRange generator interval = uniformRM interval generator
+
+randomInUnitDisk :: RandomGenerator -> IO Vector3
+randomInUnitDisk gen = do
+    randomx <- randomInRange gen (-1, 1)
+    randomy <- randomInRange gen (-1, 1)
+    let p = (Vector3 randomx randomy 0)
+    if (lengthSquared p) < 1 then
+        pure p
+    else
+        randomInUnitDisk gen

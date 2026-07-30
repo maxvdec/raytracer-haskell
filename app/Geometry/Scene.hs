@@ -4,7 +4,7 @@ module Geometry.Scene where
 
 import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.))
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk)
 
 type ViewportResolution = (Float, Float)
 
@@ -17,27 +17,37 @@ data Camera = Camera
     , lookfrom :: Vector3
     , lookat :: Vector3
     , vup :: Vector3
+    , defocusAngle :: Float
+    , focusDist :: Float
+    , defocusDiskU :: Vector3
+    , defocusDiskV :: Vector3
     }
+
 
 fillViewportResolution :: Camera -> Camera
 fillViewportResolution cam =
-    let flength = vecLength ((lookfrom cam) - (lookat cam)) 
-        theta = degreesToRadians flength 
+    let theta = degreesToRadians (fov cam)
         (resX, resY) = resolution cam
         h = tan (theta / 2)
-        viewportHeight = 2 * h * (fov cam)
+        viewportHeight = 2 * h * (focusDist cam)
         viewportWidth = viewportHeight * ((fromInteger resX) / (fromInteger resY))
     in
-        Camera {
-            viewportResolution = (viewportWidth, viewportHeight)
-            , resolution = (resX, resY)
-            , samplesPerPixel = (samplesPerPixel cam)
-            , maxDepth = (maxDepth cam)
-            , fov = (fov cam)
-            , lookfrom = (lookfrom cam)
-            , lookat = (lookat cam)
-            , vup = (vup cam)
-        }
+        cam
+            { viewportResolution = (viewportWidth, viewportHeight)
+                , resolution = (resX, resY)
+            }
+
+fillDiskInfo :: Camera -> Camera
+fillDiskInfo cam =
+    let defocusRadius = (focusDist cam) * tan (degreesToRadians ((defocusAngle cam) / 2))
+        w = unit ((lookfrom cam) - (lookat cam)) 
+        u = unit (cross (vup cam) w)
+        v = cross w u in
+    cam {
+        defocusDiskU = u *. defocusRadius
+        , defocusDiskV = v *. defocusRadius
+    }
+    
 
 calculateUV :: Camera -> (Vector3, Vector3)
 calculateUV cam =
@@ -60,9 +70,8 @@ calculateTopLeftPos cam =
     let 
         (viewportU, viewportV) = calculateUV cam
         (deltaU, deltaV) = calculateDeltaUV cam
-        focalLength = vecLength ((lookfrom cam) - (lookat cam)) 
         w = unit ((lookfrom cam) - (lookat cam)) 
-        focalVector = focalLength .* w 
+        focalVector = (focusDist cam) .* w 
 
         viewportUpperLeft =
             (lookfrom cam)
@@ -78,11 +87,13 @@ makeRayForCoordinate generator cam x y =
         camCenter = lookfrom cam 
      in do
             offset <- sampleSquare
+            randomUnit <- defocusDiskSample generator
             let sampleLoc = pixel0Pos + ((fromInteger x + getX offset) .* deltaU) + ((fromInteger y + getY offset) .* deltaV)
+            let rayOrigin = if (defocusAngle cam) <= 0 then camCenter else randomUnit
             pure
                 ( Ray
-                    { origin = camCenter
-                    , direction = sampleLoc - camCenter
+                    { origin = rayOrigin 
+                    , direction = sampleLoc - rayOrigin 
                     }
                 )
   where
@@ -93,6 +104,12 @@ makeRayForCoordinate generator cam x y =
 
         pure (Vector3 xOffset yOffset 0)
 
+    defocusDiskSample :: RandomGenerator -> IO Vector3
+    defocusDiskSample rand = do
+        p <- randomInUnitDisk rand
+        let result = lookfrom cam + ((getX p) .* (defocusDiskU cam)) + ((getY p) .* (defocusDiskV cam))
+        pure result
+        
 newtype World = World
     { hittables :: [SomeHittable]
     }
