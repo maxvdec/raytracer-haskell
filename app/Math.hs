@@ -6,6 +6,13 @@ import Data.Ord (clamp)
 import System.Random (StdGen, newStdGen)
 import System.Random.Stateful (IOGenM, newIOGenM, uniformRM)
 
+(|>) :: a -> (a -> b) -> b
+x |> f = f x
+
+degreesToRadians :: Float -> Float
+degreesToRadians d =
+    d * (pi / 180)
+
 type Resolution = (Integer, Integer)
 type ImageCoord = (Integer, Integer)
 type TextureCoord = (Float, Float)

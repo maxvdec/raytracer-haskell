@@ -1,11 +1,11 @@
 module Main (main) where
 
 import Geometry.Hit (SomeHittable (SomeHittable))
-import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, maxDepth, resolution, samplesPerPixel, viewportResolution), World (World, hittables), createViewportResolutionFromHeight)
+import Geometry.Scene (Camera (Camera, cameraCenter, focalLength, maxDepth, resolution, samplesPerPixel, viewportResolution, fov), World (World, hittables), fillViewportResolution)
 import Geometry.Shapes
 import Image
 import Materials (SomeMaterial (SomeMaterial), makeLambertian, makeMetal, makeDielectric)
-import Math (Resolution, Vector3 (Vector3))
+import Math (Resolution, Vector3 (Vector3), (|>))
 import Renders (computedImage, rayPass)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
 
@@ -37,12 +37,13 @@ main =
     let camera =
             Camera
                 { focalLength = 1.0
-                , viewportResolution = createViewportResolutionFromHeight 2.0 mediumResolution
+                , viewportResolution = (0, 0)
                 , cameraCenter = Vector3 0 0 0
                 , resolution = mediumResolution
                 , samplesPerPixel = 100
                 , maxDepth = 50
-                }
+                , fov = 90
+                } |> fillViewportResolution
      in withFile "./output.ppm" WriteMode $ \handle -> do
             hPutStr handle (ppmHeader mediumResolution)
             computedImage

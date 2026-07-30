@@ -4,13 +4,9 @@ module Geometry.Scene where
 
 import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Interval, Point3, RandomGenerator, Resolution, TextureCoord, Vector3 (Vector3), getX, getY, randomFloat, randomInRange, (+.), (.*), (/.))
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians)
 
 type ViewportResolution = (Float, Float)
-
-createViewportResolutionFromHeight :: Float -> Resolution -> ViewportResolution
-createViewportResolutionFromHeight viewH (w, h) =
-    (viewH * fromInteger w / fromInteger h, viewH)
 
 data Camera = Camera
     { focalLength :: Float
@@ -19,7 +15,27 @@ data Camera = Camera
     , resolution :: Resolution
     , samplesPerPixel :: Integer
     , maxDepth :: Integer
+    , fov :: Float 
     }
+
+fillViewportResolution :: Camera -> Camera
+fillViewportResolution cam =
+    let flength = focalLength cam 
+        theta = degreesToRadians flength 
+        (resX, resY) = resolution cam
+        h = tan (theta / 2)
+        viewportHeight = 2 * h * (fov cam)
+        viewportWidth = viewportHeight * ((fromInteger resX) / (fromInteger resY))
+    in
+        Camera {
+            focalLength = flength
+            , viewportResolution = (viewportWidth, viewportHeight)
+            , cameraCenter = (cameraCenter cam)
+            , resolution = (resX, resY)
+            , samplesPerPixel = (samplesPerPixel cam)
+            , maxDepth = (maxDepth cam)
+            , fov = (fov cam)
+        }
 
 calculateUV :: Camera -> (Vector3, Vector3)
 calculateUV cam =
