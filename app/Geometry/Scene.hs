@@ -4,23 +4,24 @@ module Geometry.Scene where
 
 import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians)
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.))
 
 type ViewportResolution = (Float, Float)
 
 data Camera = Camera
-    { focalLength :: Float
-    , viewportResolution :: ViewportResolution
-    , cameraCenter :: Point3
+    { viewportResolution :: ViewportResolution
     , resolution :: Resolution
     , samplesPerPixel :: Integer
     , maxDepth :: Integer
     , fov :: Float 
+    , lookfrom :: Vector3
+    , lookat :: Vector3
+    , vup :: Vector3
     }
 
 fillViewportResolution :: Camera -> Camera
 fillViewportResolution cam =
-    let flength = focalLength cam 
+    let flength = vecLength ((lookfrom cam) - (lookat cam)) 
         theta = degreesToRadians flength 
         (resX, resY) = resolution cam
         h = tan (theta / 2)
@@ -28,20 +29,23 @@ fillViewportResolution cam =
         viewportWidth = viewportHeight * ((fromInteger resX) / (fromInteger resY))
     in
         Camera {
-            focalLength = flength
-            , viewportResolution = (viewportWidth, viewportHeight)
-            , cameraCenter = (cameraCenter cam)
+            viewportResolution = (viewportWidth, viewportHeight)
             , resolution = (resX, resY)
             , samplesPerPixel = (samplesPerPixel cam)
             , maxDepth = (maxDepth cam)
             , fov = (fov cam)
+            , lookfrom = (lookfrom cam)
+            , lookat = (lookat cam)
+            , vup = (vup cam)
         }
 
 calculateUV :: Camera -> (Vector3, Vector3)
 calculateUV cam =
-    ( Vector3 (fst (viewportResolution cam)) 0 0
-    , Vector3 0 (-snd (viewportResolution cam)) 0
-    )
+    let w = unit ((lookfrom cam) - (lookat cam)) 
+        u = unit (cross (vup cam) w)
+        v = cross w u
+        (viewportWidth, viewportHeight) = viewportResolution cam in
+    (u *. viewportWidth, (-v) *. viewportHeight)
 
 calculateDeltaUV :: Camera -> (Vector3, Vector3)
 calculateDeltaUV cam =
@@ -53,13 +57,15 @@ calculateDeltaUV cam =
 
 calculateTopLeftPos :: Camera -> Vector3
 calculateTopLeftPos cam =
-    let camCenter = cameraCenter cam
+    let 
         (viewportU, viewportV) = calculateUV cam
         (deltaU, deltaV) = calculateDeltaUV cam
-        focalVector = Vector3 0 0 (focalLength cam)
+        focalLength = vecLength ((lookfrom cam) - (lookat cam)) 
+        w = unit ((lookfrom cam) - (lookat cam)) 
+        focalVector = focalLength .* w 
 
         viewportUpperLeft =
-            camCenter
+            (lookfrom cam)
                 - focalVector
                 - viewportU /. 2
                 - viewportV /. 2
@@ -69,7 +75,7 @@ makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ra
 makeRayForCoordinate generator cam x y =
     let (deltaU, deltaV) = calculateDeltaUV cam
         pixel0Pos = calculateTopLeftPos cam
-        camCenter = cameraCenter cam
+        camCenter = lookfrom cam 
      in do
             offset <- sampleSquare
             let sampleLoc = pixel0Pos + ((fromInteger x + getX offset) .* deltaU) + ((fromInteger y + getY offset) .* deltaV)
