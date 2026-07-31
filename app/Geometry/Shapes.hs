@@ -11,8 +11,9 @@ import Geometry.AABB (AABB (axisX, axisY, axisZ), aabbFromAABBs, aabbFromPoints)
 import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), SomeHittable (SomeHittable), hitNormal, hitP, makeHit, setFaceNormal)
 import Geometry.HitInfo (HitInfo (normal, p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at, makeRay)
+import Geometry.Scene (packHittables)
 import Graphics.Materials (SomeMaterial (SomeMaterial))
-import Math (Addable (..), Interval, Point3, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, unit, (.*), (.-), (/.))
+import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, unit, (.*), (.-), (/.))
 
 data Sphere = Sphere
     { center :: Ray
@@ -45,12 +46,14 @@ getSphereUV p =
      in (u, v)
 
 instance Hittable Sphere where
-    hit :: Sphere -> Ray -> Interval -> Maybe Hit
-    hit sphere ray interval
-        | discriminant < 0 = Nothing
+    hit :: Sphere -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
+    hit sphere _ ray interval
+        | discriminant < 0 = pure Nothing
         | otherwise =
-            findHit firstRoot
-                <|> findHit secondRoot
+            pure
+                ( findHit firstRoot
+                    <|> findHit secondRoot
+                )
       where
         currentCenter = at (center sphere) (time ray)
         oc = currentCenter - origin ray
@@ -116,8 +119,8 @@ data Quad = Quad
     }
 
 instance Hittable Quad where
-    hit :: Quad -> Ray -> Interval -> Maybe Hit
-    hit quad ray interval =
+    hit :: Quad -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
+    hit quad _ ray interval =
         let denom = dot normal (direction ray)
             t = (d - dot normal (origin ray)) / denom
             intersection = at ray t
@@ -128,9 +131,9 @@ instance Hittable Quad where
             notContained = not (contains interval t)
          in if isParallel || notContained
                 then
-                    Nothing
+                    pure Nothing
                 else
-                    isInterior intersection (setFaceNormal initialHit ray normal)
+                    pure (isInterior intersection (setFaceNormal initialHit ray normal))
       where
         normal :: Vector3
         normal =
@@ -186,7 +189,7 @@ makeQuad org u v mat =
         , quadMaterial = mat
         }
 
-makeBox :: Point3 -> Point3 -> SomeMaterial -> [SomeHittable]
+makeBox :: Point3 -> Point3 -> SomeMaterial -> SomeHittable
 makeBox a b mat =
     let boxMin = pickVec min
         boxMax = pickVec max
@@ -194,15 +197,17 @@ makeBox a b mat =
         dx = Vector3 ((getX boxMax) - (getX boxMin)) 0 0
         dy = Vector3 0 ((getY boxMax) - (getY boxMin)) 0
         dz = Vector3 0 0 ((getZ boxMax) - (getZ boxMin))
-     in map
-            (\x -> SomeHittable x)
-            [ makeSide boxMin boxMin boxMax dx dy
-            , makeSide boxMax boxMin boxMax (-dz) dy
-            , makeSide boxMax boxMin boxMin (-dx) dy
-            , makeSide boxMin boxMin boxMin dz dy
-            , makeSide boxMin boxMax boxMax dx (-dz)
-            , makeSide boxMin boxMin boxMin dx dz
-            ]
+     in packHittables
+            ( map
+                (\x -> SomeHittable x)
+                [ makeSide boxMin boxMin boxMax dx dy
+                , makeSide boxMax boxMin boxMax (-dz) dy
+                , makeSide boxMax boxMin boxMin (-dx) dy
+                , makeSide boxMin boxMin boxMin dz dy
+                , makeSide boxMin boxMax boxMax dx (-dz)
+                , makeSide boxMin boxMin boxMin dx dz
+                ]
+            )
   where
     pickVec :: (Float -> Float -> Float) -> Vector3
     pickVec f =
@@ -219,14 +224,20 @@ data Translation
     }
 
 instance Hittable Translation where
-    hit :: Translation -> Ray -> Interval -> Maybe Hit
-    hit trans r interval =
+    hit :: Translation -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
+    hit trans gen r interval = do
         let offset = r{origin = (origin r) - (translationOffset trans)}
-            hitResult = hit (translatedObject trans) offset interval
-         in case hitResult of
-                Nothing -> Nothing
-                Just h ->
-                    Just
+        hitResult <-
+            hit
+                (translatedObject trans)
+                gen
+                offset
+                interval
+        case hitResult of
+            Nothing -> pure Nothing
+            Just h ->
+                pure
+                    ( Just
                         ( h
                             { info =
                                 (info h)
@@ -234,6 +245,7 @@ instance Hittable Translation where
                                     }
                             }
                         )
+                    )
 
     boundingBox :: Translation -> AABB
     boundingBox trans =
@@ -255,18 +267,19 @@ data RotateY = RotateY
     }
 
 instance Hittable RotateY where
-    hit :: RotateY -> Ray -> Interval -> Maybe Hit
-    hit rotation r interval =
+    hit :: RotateY -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
+    hit rotation gen r interval = do
         let rotatedRay =
                 r
                     { origin = org
                     , direction = dir
                     }
-            result = hit (rotatedObject rotation) rotatedRay interval
-         in case result of
-                Nothing -> Nothing
-                Just h ->
-                    Just
+        result <- hit (rotatedObject rotation) gen rotatedRay interval
+        case result of
+            Nothing -> pure Nothing
+            Just h ->
+                pure
+                    ( Just
                         ( h
                             { info =
                                 (info h)
@@ -275,6 +288,7 @@ instance Hittable RotateY where
                                     }
                             }
                         )
+                    )
       where
         matrixWithRayProperty :: (Ray -> Vector3) -> Point3
         matrixWithRayProperty f =

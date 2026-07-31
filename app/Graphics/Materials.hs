@@ -150,3 +150,31 @@ makeLightFromColor col =
     Light
         { emissionTexture = SomeTexture (makeSolidColor col)
         }
+
+newtype Isotropic = Isotropic
+    { isotropicTexture :: SomeTexture
+    }
+
+instance Material Isotropic where
+    scatter :: Isotropic -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter isotropic gen r info = do
+        unitVec <- randomUnitVector gen
+        let scattered =
+                r
+                    { origin = (p info)
+                    , direction = unitVec
+                    }
+            attenuation = sample (isotropicTexture isotropic) (uv info) (p info)
+        pure (Just (attenuation, scattered))
+
+makeIsotropic :: SomeTexture -> Isotropic
+makeIsotropic tex =
+    Isotropic
+        { isotropicTexture = tex
+        }
+
+makeSolidIsotropic :: Color -> Isotropic
+makeSolidIsotropic col =
+    Isotropic
+        { isotropicTexture = SomeTexture (makeSolidColor col)
+        }

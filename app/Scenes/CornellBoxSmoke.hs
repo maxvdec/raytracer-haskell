@@ -1,6 +1,7 @@
-module Scenes.CornellBox where
+module Scenes.CornellBoxSmoke where
 
 import Geometry.BVH (createBVHTree)
+import Geometry.ConstantMedium (makeMedium)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
 import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
@@ -8,12 +9,12 @@ import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMat
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
 import Math (Resolution, Vector3 (Vector3), (|>), (||>))
 
-cornellBoxCamera :: Resolution -> Camera
-cornellBoxCamera res =
+cornellBoxSmokeCamera :: Resolution -> Camera
+cornellBoxSmokeCamera res =
     Camera
         { viewportResolution = (0, 0)
         , resolution = res
-        , samplesPerPixel = 100
+        , samplesPerPixel = 1000
         , maxDepth = 50
         , fov = 40
         , lookfrom = (Vector3 278 278 (-800))
@@ -28,8 +29,8 @@ cornellBoxCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-cornellBoxWorld :: IO World
-cornellBoxWorld = do
+cornellBoxSmokeWorld :: IO World
+cornellBoxSmokeWorld = do
     let red = makeSolidLambertian (Vector3 0.65 0.05 0.05)
         white = makeSolidLambertian (Vector3 0.73 0.73 0.73)
         green = makeSolidLambertian (Vector3 0.12 0.45 0.15)
@@ -42,8 +43,16 @@ cornellBoxWorld = do
         wall' = makeQuad (Vector3 555 555 555) (Vector3 (-555) 0 0) (Vector3 0 0 (-555)) (SomeMaterial white)
         wall'' = makeQuad (Vector3 0 0 555) (Vector3 555 0 0) (Vector3 0 555 0) (SomeMaterial white)
 
-        box1 = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial white)
-        box2 = makeBox (Vector3 0 0 0) (Vector3 165 165 165) (SomeMaterial white)
+        box1 =
+            (makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial white))
+                |> rotateBy 15
+                |> translateBy (Vector3 265 0 295)
+        box2 =
+            (makeBox (Vector3 0 0 0) (Vector3 165 165 165) (SomeMaterial white))
+                |> rotateBy (-18)
+                |> translateBy (Vector3 130 0 65)
+
+        medium = makeMedium box2 0.01 (Vector3 1 1 1)
 
         scene =
             [ SomeHittable left
@@ -52,13 +61,13 @@ cornellBoxWorld = do
             , SomeHittable wall
             , SomeHittable wall'
             , SomeHittable wall''
-            , (box1 |> rotateBy 15 |> translateBy (Vector3 265 0 295))
-            , (box2 |> rotateBy (-18) |> translateBy (Vector3 130 0 65))
+            , box1
+            , SomeHittable medium
             ]
 
         root = createBVHTree scene
 
     pure (World{hittables = [SomeHittable root]})
 
-cornellBoxScene :: Scene
-cornellBoxScene res = (cornellBoxCamera res, cornellBoxWorld)
+cornellBoxSmokeScene :: Scene
+cornellBoxSmokeScene res = (cornellBoxSmokeCamera res, cornellBoxSmokeWorld)

@@ -77,6 +77,8 @@ executable raytracer
         Scenes.Quads
         Scenes.SimpleLight
         Scenes.CornellBox
+        Scenes.CornellBoxSmoke
+        Geometry.ConstantMedium
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -87,6 +89,7 @@ executable raytracer
         random,
         async,
         vector,
+        transformers,
         JuicyPixels
 
     ghc-options: -O2 -threaded -rtsopts -with-rtsopts "-N -A64m"

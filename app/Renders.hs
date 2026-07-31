@@ -147,8 +147,9 @@ rayColor ::
 rayColor _ _ _ _ depth
     | depth <= 0 =
         pure (Vector3 0 0 0)
-rayColor generator camera r world depth =
-    case hit world r (0.001, infinity) of
+rayColor generator camera r world depth = do
+    res <- hit world generator r (0.001, infinity)
+    case res of
         Just hitted ->
             colorScattering
                 generator

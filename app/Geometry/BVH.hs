@@ -15,30 +15,30 @@ data BVH
     | Branch !AABB !BVH !BVH
 
 instance Hittable BVH where
-    hit :: BVH -> Ray -> Interval -> Maybe Hit
-    hit bvh r rayT =
+    hit :: BVH -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
+    hit bvh gen r rayT =
         case bvh of
             Leaf aabb obj -> hitLeaf aabb obj
             Branch aabb node1 node2 -> hitBranch aabb node1 node2
       where
-        hitLeaf :: AABB -> SomeHittable -> Maybe Hit
+        hitLeaf :: AABB -> SomeHittable -> IO (Maybe Hit)
         hitLeaf aabb obj = do
-            _ <- hitAABB aabb r rayT
-            hit obj r rayT
+            _ <- pure (hitAABB aabb r rayT)
+            hit obj gen r rayT
 
-        hitBranch :: AABB -> BVH -> BVH -> Maybe Hit
+        hitBranch :: AABB -> BVH -> BVH -> IO (Maybe Hit)
         hitBranch aabb node1 node2 = do
-            _ <- hitAABB aabb r rayT
-            let leftResult = hit node1 r rayT
-                newInterval =
+            _ <- pure (hitAABB aabb r rayT)
+            leftResult <- hit node1 gen r rayT
+            let newInterval =
                     case leftResult of
                         Nothing ->
                             rayT
                         Just h ->
                             (fst rayT, t (info h))
-                rightResult = hit node2 r newInterval
+            rightResult <- hit node2 gen r newInterval
 
-            rightResult <|> leftResult
+            pure (rightResult <|> leftResult)
 
     boundingBox :: BVH -> AABB
     boundingBox (Leaf aabb _) = aabb

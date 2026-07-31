@@ -12,6 +12,7 @@ import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeChecke
 import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
 import Renders (computedImage, rayPass)
 import Scenes.CornellBox (cornellBoxScene)
+import Scenes.CornellBoxSmoke (cornellBoxSmokeScene)
 import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.Quads (quadsScene)
 import Scenes.SimpleLight (simpleLightScene)
@@ -35,10 +36,11 @@ matchScene name res = case (map toLower name) of
     "quads" -> quadsScene res
     "simple_light" -> simpleLightScene res
     "cornell" -> cornellBoxScene res
+    "smoke" -> cornellBoxSmokeScene res
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
-currentResolution = devResolution
+currentResolution = normalResolution
 
 main :: IO ()
 main = do
