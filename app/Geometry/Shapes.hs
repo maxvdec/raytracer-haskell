@@ -4,14 +4,15 @@
 module Geometry.Shapes where
 
 import Control.Applicative
+import Control.Exception.Base (NoMatchingContinuationPrompt)
 import Control.Monad (when)
 import GHC.Float (roundFloat)
-import Geometry.AABB (AABB, aabbFromAABBs, aabbFromPoints)
-import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), SomeHittable (SomeHittable), makeHit, setFaceNormal)
-import Geometry.HitInfo (HitInfo (uv))
-import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
+import Geometry.AABB (AABB (axisX, axisY, axisZ), aabbFromAABBs, aabbFromPoints)
+import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), SomeHittable (SomeHittable), hitNormal, hitP, makeHit, setFaceNormal)
+import Geometry.HitInfo (HitInfo (normal, p, uv))
+import Geometry.Ray (Ray (Ray, direction, origin, time), at, makeRay)
 import Graphics.Materials (SomeMaterial (SomeMaterial))
-import Math (Interval, Point3, TextureCoord, Vector3 (Vector3), contains, cross, dot, getX, getY, getZ, lengthSquared, unit, (.*), (.-), (/.))
+import Math (Addable (..), Interval, Point3, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, unit, (.*), (.-), (/.))
 
 data Sphere = Sphere
     { center :: Ray
@@ -210,3 +211,145 @@ makeBox a b mat =
     makeSide :: Vector3 -> Vector3 -> Vector3 -> Vector3 -> Vector3 -> Quad
     makeSide a' b' c' d d' =
         makeQuad (Vector3 (getX a') (getY b') (getZ c')) d d' mat
+
+data Translation
+    = Translation
+    { translatedObject :: SomeHittable
+    , translationOffset :: Vector3
+    }
+
+instance Hittable Translation where
+    hit :: Translation -> Ray -> Interval -> Maybe Hit
+    hit trans r interval =
+        let offset = r{origin = (origin r) - (translationOffset trans)}
+            hitResult = hit (translatedObject trans) offset interval
+         in case hitResult of
+                Nothing -> Nothing
+                Just h ->
+                    Just
+                        ( h
+                            { info =
+                                (info h)
+                                    { p = (p (info h)) + (translationOffset trans)
+                                    }
+                            }
+                        )
+
+    boundingBox :: Translation -> AABB
+    boundingBox trans =
+        (boundingBox (translatedObject trans)) +. (translationOffset trans)
+
+translateBy :: Vector3 -> SomeHittable -> SomeHittable
+translateBy offset obj =
+    SomeHittable
+        ( Translation
+            { translatedObject = obj
+            , translationOffset = offset
+            }
+        )
+
+data RotateY = RotateY
+    { rotatedObject :: SomeHittable
+    , sinTheta :: Float
+    , cosTheta :: Float
+    }
+
+instance Hittable RotateY where
+    hit :: RotateY -> Ray -> Interval -> Maybe Hit
+    hit rotation r interval =
+        let rotatedRay =
+                r
+                    { origin = org
+                    , direction = dir
+                    }
+            result = hit (rotatedObject rotation) rotatedRay interval
+         in case result of
+                Nothing -> Nothing
+                Just h ->
+                    Just
+                        ( h
+                            { info =
+                                (info h)
+                                    { p = transformToWorldSpace hitP h
+                                    , normal = transformToWorldSpace hitNormal h
+                                    }
+                            }
+                        )
+      where
+        matrixWithRayProperty :: (Ray -> Vector3) -> Point3
+        matrixWithRayProperty f =
+            let cost = (cosTheta rotation)
+                sint = (sinTheta rotation)
+                x = (cost * (getX (f r))) - (sint * (getZ (f r)))
+                y = (getY (f r))
+                z = (sint * (getX (f r))) + (cost * (getZ (f r)))
+             in Vector3 x y z
+
+        org :: Point3
+        org = matrixWithRayProperty origin
+
+        dir :: Vector3
+        dir = matrixWithRayProperty direction
+
+        transformToWorldSpace :: (Hit -> Vector3) -> Hit -> Vector3
+        transformToWorldSpace f h =
+            let cost = (cosTheta rotation)
+                sint = (sinTheta rotation)
+                x = (cost * (getX (f h))) + (sint * (getZ (f h)))
+                y = (getY (f h))
+                z = (-sint * (getX (f h))) + (cost * (getZ (f h)))
+             in Vector3 x y z
+
+    boundingBox :: RotateY -> AABB
+    boundingBox rotation =
+        let originalBox = boundingBox (rotatedObject rotation)
+
+            initialMin = Vector3 infinity infinity infinity
+            initialMax = Vector3 (-infinity) (-infinity) (-infinity)
+
+            (finalMin, finalMax) =
+                foldl'
+                    (\acc (i, j, k) -> getMaxMinCorner i j k originalBox acc)
+                    (initialMin, initialMax)
+                    cornerIndices
+         in aabbFromPoints finalMin finalMax
+      where
+        filterVector :: (Float -> Float -> Float) -> Vector3 -> Vector3 -> Vector3
+        filterVector f a b =
+            let x = f (getX a) (getX b)
+                y = f (getY a) (getY b)
+                z = f (getZ a) (getZ b)
+             in Vector3 x y z
+
+        transformXZ :: (Float, Float) -> (Float, Float)
+        transformXZ (x, z) =
+            let cost = (cosTheta rotation)
+                sint = (sinTheta rotation)
+             in (cost * x + sint * z, -sint * x + cost * z)
+
+        getMaxMinCorner :: Int -> Int -> Int -> AABB -> (Vector3, Vector3) -> (Vector3, Vector3)
+        getMaxMinCorner i j k aabb (currentMin, currentMax) =
+            let x = fromIntegral i * snd (axisX aabb) + (1 - fromIntegral i) * fst (axisX aabb)
+                y = fromIntegral j * snd (axisY aabb) + (1 - fromIntegral j) * fst (axisY aabb)
+                z = fromIntegral k * snd (axisZ aabb) + (1 - fromIntegral k) * fst (axisZ aabb)
+
+                (newx, newz) = transformXZ (x, z)
+
+                tester = Vector3 newx y newz
+             in (filterVector min currentMin tester, filterVector max currentMax tester)
+
+        cornerIndices :: [(Int, Int, Int)]
+        cornerIndices = [(i, j, k) | i <- [0, 1], j <- [0, 1], k <- [0, 1]]
+
+rotateBy :: Float -> SomeHittable -> SomeHittable
+rotateBy angle obj =
+    let radians = degreesToRadians angle
+        sint = sin radians
+        cost = cos radians
+     in SomeHittable
+            ( RotateY
+                { rotatedObject = obj
+                , cosTheta = cost
+                , sinTheta = sint
+                }
+            )

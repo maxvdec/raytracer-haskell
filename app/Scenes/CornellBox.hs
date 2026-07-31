@@ -3,10 +3,10 @@ module Scenes.CornellBox where
 import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
-import Geometry.Shapes (makeBox, makeQuad, makeSphere)
+import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
 import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor, makeSolidLambertian)
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
-import Math (Resolution, Vector3 (Vector3), (|>))
+import Math (Resolution, Vector3 (Vector3), (|>), (||>))
 
 cornellBoxCamera :: Resolution -> Camera
 cornellBoxCamera res =
@@ -42,8 +42,8 @@ cornellBoxWorld = do
         wall' = makeQuad (Vector3 555 555 555) (Vector3 (-555) 0 0) (Vector3 0 0 (-555)) (SomeMaterial white)
         wall'' = makeQuad (Vector3 0 0 555) (Vector3 555 0 0) (Vector3 0 555 0) (SomeMaterial white)
 
-        box1 = makeBox (Vector3 130 0 64) (Vector3 295 165 230) (SomeMaterial white)
-        box2 = makeBox (Vector3 265 0 295) (Vector3 430 330 460) (SomeMaterial white)
+        box1 = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial white)
+        box2 = makeBox (Vector3 0 0 0) (Vector3 165 165 165) (SomeMaterial white)
 
         scene =
             [ SomeHittable left
@@ -53,8 +53,8 @@ cornellBoxWorld = do
             , SomeHittable wall'
             , SomeHittable wall''
             ]
-                ++ box1
-                ++ box2
+                ++ box1 ||> rotateBy 15 ||> translateBy (Vector3 265 0 295)
+                ++ box2 ||> rotateBy (-18) ||> translateBy (Vector3 130 0 65)
 
         root = createBVHTree scene
 

@@ -1,8 +1,11 @@
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Geometry.AABB where
 
 import Control.Monad (foldM)
 import Geometry.Ray (Ray (direction, origin))
-import Math (Interval, Point3, enclose, expand, getAxisFromVec3, getX, getY, getZ, sizeOfInterval, surrounds, (|>))
+import Math (Addable ((+.), (.+)), Interval, Point3, Vector3, enclose, expand, getAxisFromVec3, getX, getY, getZ, sizeOfInterval, surrounds, (|>))
 
 data AABB = AABB
     { axisX :: Interval
@@ -97,3 +100,15 @@ padAABBToMinimums aabb =
             , axisY = newY
             , axisZ = newZ
             }
+
+instance Addable AABB Vector3 where
+    (+.) :: AABB -> Vector3 -> AABB
+    aabb +. vec =
+        AABB
+            { axisX = (axisX aabb) +. (getX vec)
+            , axisY = (axisY aabb) +. (getY vec)
+            , axisZ = (axisZ aabb) +. (getZ vec)
+            }
+
+    (.+) :: Vector3 -> AABB -> AABB
+    vec .+ aabb = aabb +. vec

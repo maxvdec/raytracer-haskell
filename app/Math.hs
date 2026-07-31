@@ -1,4 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Math where
 
@@ -8,6 +11,13 @@ import System.Random.Stateful (IOGenM, newIOGenM, uniformRM)
 
 (|>) :: a -> (a -> b) -> b
 x |> f = f x
+
+(||>) :: [a] -> (a -> b) -> [b]
+l ||> f = map f l
+
+class Addable a b where
+    (+.) :: a -> b -> a
+    (.+) :: b -> a -> a
 
 degreesToRadians :: Float -> Float
 degreesToRadians d =
@@ -20,6 +30,13 @@ type NormalizedColor = (Integer, Integer, Integer)
 type Interval = (Float, Float)
 type RandomGenerator = IOGenM StdGen
 
+instance Addable (Float, Float) Float where
+    (+.) :: (Float, Float) -> Float -> (Float, Float)
+    (a, b) +. n = (a + n, b + n)
+
+    (.+) :: Float -> (Float, Float) -> (Float, Float)
+    n .+ int = int +. n
+
 makeRandomGenerator :: IO RandomGenerator
 makeRandomGenerator = newStdGen >>= newIOGenM
 
@@ -29,11 +46,9 @@ contains (minimumValue, maximumValue) value =
 
 expand :: Interval -> Float -> Interval
 expand interval delta =
-    let padding = delta / 2 
+    let padding = delta / 2
         (iMin, iMax) = interval
-    in
-        (iMin - padding, iMax + padding)
-    
+     in (iMin - padding, iMax + padding)
 
 sizeOfInterval :: Interval -> Float
 sizeOfInterval (min, max) =
@@ -46,8 +61,8 @@ surrounds (min, max) val =
 enclose :: Interval -> Interval -> Interval
 enclose a b =
     let newMin = if fst a <= fst b then fst a else fst b
-        newMax = if snd a >= snd b then snd a else snd b in
-        (newMin, newMax)
+        newMax = if snd a >= snd b then snd a else snd b
+     in (newMin, newMax)
 
 normalizeColor :: Color -> NormalizedColor
 normalizeColor (Vector3 r g b) =
@@ -127,13 +142,14 @@ scalar ./ Vector3 x y z =
 Vector3 x y z /. scalar =
     Vector3 (x / scalar) (y / scalar) (z / scalar)
 
-(.+) :: Float -> Vector3 -> Vector3
-scalar .+ Vector3 x y z =
-    Vector3 (scalar + x) (scalar + y) (scalar + z)
+instance Addable Vector3 Float where
+    (.+) :: Float -> Vector3 -> Vector3
+    scalar .+ Vector3 x y z =
+        Vector3 (scalar + x) (scalar + y) (scalar + z)
 
-(+.) :: Vector3 -> Float -> Vector3
-Vector3 x y z +. scalar =
-    Vector3 (scalar + x) (scalar + y) (scalar + z)
+    (+.) :: Vector3 -> Float -> Vector3
+    Vector3 x y z +. scalar =
+        Vector3 (scalar + x) (scalar + y) (scalar + z)
 
 (.-) :: Float -> Vector3 -> Vector3
 scalar .- Vector3 x y z =
@@ -166,8 +182,8 @@ refract :: Vector3 -> Vector3 -> Float -> Vector3
 refract uv n etaiOverEtat =
     let cosTheta = min (dot (-uv) n) 1.0
         rOutPrep = etaiOverEtat .* (uv + (cosTheta .* n))
-        rOutParallel = (-sqrt (abs (1.0 - (lengthSquared rOutPrep)))) .* n in
-    rOutPrep + rOutParallel
+        rOutParallel = (-sqrt (abs (1.0 - (lengthSquared rOutPrep)))) .* n
+     in rOutPrep + rOutParallel
 
 dot :: Vector3 -> Vector3 -> Float
 dot (Vector3 ax ay az) (Vector3 bx by bz) =
@@ -235,7 +251,8 @@ randomInUnitDisk gen = do
     randomx <- randomInRange gen (-1, 1)
     randomy <- randomInRange gen (-1, 1)
     let p = (Vector3 randomx randomy 0)
-    if (lengthSquared p) < 1 then
-        pure p
-    else
-        randomInUnitDisk gen
+    if (lengthSquared p) < 1
+        then
+            pure p
+        else
+            randomInUnitDisk gen
