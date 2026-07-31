@@ -27,6 +27,14 @@ contains :: Interval -> Float -> Bool
 contains (minimumValue, maximumValue) value =
     value > minimumValue && value < maximumValue
 
+expand :: Interval -> Float -> Interval
+expand interval delta =
+    let padding = delta / 2 
+        (iMin, iMax) = interval
+    in
+        (iMin - padding, iMax + padding)
+    
+
 sizeOfInterval :: Interval -> Float
 sizeOfInterval (min, max) =
     max - min
@@ -128,6 +136,12 @@ scalar .- Vector3 x y z =
 (-.) :: Vector3 -> Float -> Vector3
 Vector3 x y z -. scalar =
     Vector3 (scalar - x) (scalar - y) (scalar - z)
+
+getAxisFromVec3 :: Vector3 -> Integer -> Float
+getAxisFromVec3 vec i
+    | i == 1 = (getY vec)
+    | i == 2 = (getZ vec)
+    | otherwise = (getX vec)
 
 nearZero :: Vector3 -> Bool
 nearZero (Vector3 x y z) =
