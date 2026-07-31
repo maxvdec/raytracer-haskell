@@ -7,10 +7,10 @@ import Control.Applicative
 import Control.Monad (when)
 import GHC.Float (roundFloat)
 import Geometry.AABB (AABB, aabbFromAABBs, aabbFromPoints)
-import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), makeHit, setFaceNormal)
+import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), SomeHittable (SomeHittable), makeHit, setFaceNormal)
 import Geometry.HitInfo (HitInfo (uv))
 import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
-import Graphics.Materials (SomeMaterial)
+import Graphics.Materials (SomeMaterial (SomeMaterial))
 import Math (Interval, Point3, TextureCoord, Vector3 (Vector3), contains, cross, dot, getX, getY, getZ, lengthSquared, unit, (.*), (.-), (/.))
 
 data Sphere = Sphere
@@ -184,3 +184,29 @@ makeQuad org u v mat =
         , quadV = v
         , quadMaterial = mat
         }
+
+makeBox :: Point3 -> Point3 -> SomeMaterial -> [SomeHittable]
+makeBox a b mat =
+    let boxMin = pickVec min
+        boxMax = pickVec max
+
+        dx = Vector3 ((getX boxMax) - (getX boxMin)) 0 0
+        dy = Vector3 0 ((getY boxMax) - (getY boxMin)) 0
+        dz = Vector3 0 0 ((getZ boxMax) - (getZ boxMin))
+     in map
+            (\x -> SomeHittable x)
+            [ makeSide boxMin boxMin boxMax dx dy
+            , makeSide boxMax boxMin boxMax (-dz) dy
+            , makeSide boxMax boxMin boxMin (-dx) dy
+            , makeSide boxMin boxMin boxMin dz dy
+            , makeSide boxMin boxMax boxMax dx (-dz)
+            , makeSide boxMin boxMin boxMin dx dz
+            ]
+  where
+    pickVec :: (Float -> Float -> Float) -> Vector3
+    pickVec f =
+        Vector3 (f (getX a) (getX b)) (f (getY a) (getY b)) (f (getZ a) (getZ b))
+
+    makeSide :: Vector3 -> Vector3 -> Vector3 -> Vector3 -> Vector3 -> Quad
+    makeSide a' b' c' d d' =
+        makeQuad (Vector3 (getX a') (getY b') (getZ c')) d d' mat

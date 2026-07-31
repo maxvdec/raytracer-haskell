@@ -23,19 +23,19 @@ instance Hittable BVH where
       where
         hitLeaf :: AABB -> SomeHittable -> Maybe Hit
         hitLeaf aabb obj = do
-            narrowedInterval <- hitAABB aabb r rayT
-            hit obj r narrowedInterval
+            _ <- hitAABB aabb r rayT
+            hit obj r rayT
 
         hitBranch :: AABB -> BVH -> BVH -> Maybe Hit
         hitBranch aabb node1 node2 = do
-            narrowedInterval <- hitAABB aabb r rayT
-            let leftResult = hit node1 r narrowedInterval
+            _ <- hitAABB aabb r rayT
+            let leftResult = hit node1 r rayT
                 newInterval =
                     case leftResult of
                         Nothing ->
-                            narrowedInterval
+                            rayT
                         Just h ->
-                            (fst narrowedInterval, t (info h))
+                            (fst rayT, t (info h))
                 rightResult = hit node2 r newInterval
 
             rightResult <|> leftResult

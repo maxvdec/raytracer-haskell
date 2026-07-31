@@ -76,6 +76,7 @@ executable raytracer
         Scenes.PerlinSpheres
         Scenes.Quads
         Scenes.SimpleLight
+        Scenes.CornellBox
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

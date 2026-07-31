@@ -11,6 +11,7 @@ import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLamb
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeCheckerFromColors, makeSolidColor)
 import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
 import Renders (computedImage, rayPass)
+import Scenes.CornellBox (cornellBoxScene)
 import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.Quads (quadsScene)
 import Scenes.SimpleLight (simpleLightScene)
@@ -33,6 +34,7 @@ matchScene name res = case (map toLower name) of
     "perlin" -> perlinSpheresScene res
     "quads" -> quadsScene res
     "simple_light" -> simpleLightScene res
+    "cornell" -> cornellBoxScene res
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution

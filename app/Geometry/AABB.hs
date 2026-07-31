@@ -82,7 +82,7 @@ hitAABB aabb r rayT = do
 
             rayMin = max nearT (fst inT)
             rayMax = min farT (snd inT)
-         in if rayMax <= rayMin
+         in if rayMax < rayMin
                 then Nothing
                 else Just (rayMin, rayMax)
 
