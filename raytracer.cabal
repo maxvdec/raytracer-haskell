@@ -72,6 +72,7 @@ executable raytracer
         Geometry.AABB
         Geometry.BVH
         Scenes.World
+        Graphics.Noise
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -81,6 +82,7 @@ executable raytracer
         base >=4.20 && <4.23,
         random,
         async,
+        vector,
         JuicyPixels
 
     ghc-options: -O2 -threaded -rtsopts -with-rtsopts "-N -A64m"
