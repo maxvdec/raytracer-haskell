@@ -5,10 +5,11 @@ module Geometry.Shapes where
 
 import Control.Applicative
 import GHC.Float (roundFloat)
-import Geometry.Hit (Hit (..), Hittable (hit), makeHit, setFaceNormal)
+import Geometry.Hit (Hit (..), Hittable (hit, boundingBox), makeHit, setFaceNormal)
 import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
 import Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3 (Vector3), contains, dot, lengthSquared, (.*), (.-), (/.))
+import Geometry.AABB (AABB, aabbFromPoints, aabbFromAABBs)
 
 data Sphere = Sphere
     { center :: Ray 
@@ -72,3 +73,25 @@ instance Hittable Sphere where
                             False
                             (sphereMaterial sphere)
                  in Just (setFaceNormal initialHit ray outwardNormal)
+
+    boundingBox :: Sphere -> AABB
+    boundingBox obj 
+        | direction (center obj) == (Vector3 0 0 0) = makeStaticAABB
+        | otherwise = makeAnimatedAABB
+
+        where
+            makeStaticAABB :: AABB
+            makeStaticAABB =
+                let staticCenter = origin (center obj)
+                    rad = radius obj
+                    rvec = (Vector3 rad rad rad) in
+                    aabbFromPoints (staticCenter - rvec) (staticCenter + rvec)
+
+            makeAnimatedAABB :: AABB
+            makeAnimatedAABB =
+                let rad = radius obj
+                    rvec = (Vector3 rad rad rad) 
+                    cent = center obj
+                    box1 = aabbFromPoints ((at cent 0) - rvec) ((at cent 0) + rvec)
+                    box2 = aabbFromPoints ((at cent 1) - rvec) ((at cent 1) + rvec)
+                in aabbFromAABBs box1 box2

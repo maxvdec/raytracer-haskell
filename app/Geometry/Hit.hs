@@ -7,6 +7,7 @@ import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t))
 import Geometry.Ray (Ray (direction))
 import Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3, dot)
+import Geometry.AABB (AABB)
 
 data Hit = Hit
     { info :: HitInfo
@@ -45,9 +46,13 @@ setFaceNormal h r outward =
 
 class Hittable a where
     hit :: a -> Ray -> Interval -> Maybe Hit
+    boundingBox :: a -> AABB
 
 data SomeHittable = forall a. (Hittable a) => SomeHittable a
 
 instance Hittable SomeHittable where
     hit :: SomeHittable -> Ray -> Interval -> Maybe Hit
     hit (SomeHittable obj) = hit obj
+
+    boundingBox :: SomeHittable -> AABB
+    boundingBox (SomeHittable obj) = boundingBox obj

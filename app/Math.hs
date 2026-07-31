@@ -43,6 +43,12 @@ surrounds :: Interval -> Float -> Bool
 surrounds (min, max) val =
     min < val && max > val
 
+enclose :: Interval -> Interval -> Interval
+enclose a b =
+    let newMin = if fst a <= fst b then fst a else fst b
+        newMax = if snd a >= snd b then snd a else snd b in
+        (newMin, newMax)
+
 normalizeColor :: Color -> NormalizedColor
 normalizeColor (Vector3 r g b) =
     ( floor (255.999 * clamp (0, 0.999) r)

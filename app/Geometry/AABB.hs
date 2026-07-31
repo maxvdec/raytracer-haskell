@@ -1,5 +1,5 @@
 module Geometry.AABB where
-import Math (Interval, Point3, getX, getY, getZ, getAxisFromVec3)
+import Math (Interval, Point3, getX, getY, getZ, getAxisFromVec3, surrounds, enclose)
 import Geometry.Ray (Ray (origin, direction))
 import Control.Monad (foldM)
 
@@ -25,6 +25,18 @@ aabbFromPoints a b =
         makeAxis :: Point3 -> Point3 -> (Point3 -> Float) -> Interval
         makeAxis a' b' get =
             if (get a') <= (get b') then (get a', get b') else (get b', get a')
+
+aabbFromAABBs :: AABB -> AABB -> AABB
+aabbFromAABBs boxA boxB =
+    let x = enclose (axisX boxA) (axisX boxB)
+        y = enclose (axisY boxA) (axisY boxB)
+        z = enclose (axisZ boxA) (axisZ boxB) in
+       AABB {
+           axisX = x
+           , axisY = y
+           , axisZ = z
+       } 
+    
 
 getAxisFromAABB :: AABB -> Integer -> Interval
 getAxisFromAABB aabb i 

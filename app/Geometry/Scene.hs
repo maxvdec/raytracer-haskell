@@ -2,9 +2,10 @@
 
 module Geometry.Scene where
 
-import Geometry.Hit (Hit, Hittable (hit), SomeHittable, hitT)
+import Geometry.Hit (Hit, Hittable (hit, boundingBox), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk, randomFloat)
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk, randomFloat, infinity)
+import Geometry.AABB (AABB (axisZ, axisY, axisX, AABB), aabbFromAABBs)
 
 type ViewportResolution = (Float, Float)
 
@@ -136,3 +137,14 @@ instance Hittable World where
     hit :: World -> Ray -> Interval -> Maybe Hit
     hit world r interval =
         getClosestHit world r interval Nothing (snd interval)
+
+    boundingBox :: World -> AABB
+    boundingBox (World []) = AABB {
+        axisX = (infinity, -infinity)
+        , axisY = (infinity, -infinity)
+        , axisZ = (infinity, -infinity)
+    }
+    boundingBox (World [obj]) = boundingBox obj
+    boundingBox (World (obj : objects)) = 
+        let newWorld = World { hittables = objects } in
+        aabbFromAABBs (boundingBox obj) (boundingBox newWorld)
