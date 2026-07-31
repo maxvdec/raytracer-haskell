@@ -5,7 +5,7 @@ module Graphics.Texture where
 
 import Codec.Picture (Image (imageHeight, imageWidth), Pixel (pixelAt), PixelRGB8 (PixelRGB8), convertRGB8, readImage)
 import Data.Ord (clamp)
-import Graphics.Noise (Perlin, makePerlinNoise, noise)
+import Graphics.Noise (Perlin, makePerlinNoise, noise, turb)
 import Math (Color, RandomGenerator, TextureCoord, Vector3 (Vector3), getX, getY, getZ, makeRandomGenerator, (*.))
 
 class Texture a where
@@ -116,7 +116,7 @@ instance Texture NoiseTexture where
     sample tex _ p =
         let perlin = (perlinNoise tex)
             scale = (noiseFrequency tex)
-         in (Vector3 1 1 1) *. 0.5 *. (1.0 + (noise perlin (p *. scale)))
+         in (Vector3 0.5 0.5 0.5) *. (1 + sin (scale * (getZ p) + 10 * turb perlin p 7))
 
 makeNoiseTexture :: Float -> IO NoiseTexture
 makeNoiseTexture freq = do

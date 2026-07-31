@@ -4,7 +4,7 @@ import Control.Concurrent.Async (mapConcurrently)
 import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import GHC.Conc (getNumCapabilities)
 import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP, hitT)
-import Geometry.Ray (Ray (Ray, direction, origin), at)
+import Geometry.Ray (Ray (Ray, direction, origin, time), at)
 import Geometry.Scene (Camera (maxDepth, samplesPerPixel), World, makeRayForCoordinate)
 import Graphics.Image (putColor)
 import Graphics.Materials (Material (scatter))
@@ -113,6 +113,7 @@ colorGradient generator h world depth = do
             Ray
                 { origin = hitP h
                 , direction = dir + hitNormal h
+                , time = 0
                 }
     bounces <- rayColor generator ray world (depth - 1)
     pure (0.5 .* bounces)
@@ -131,7 +132,7 @@ rayColor :: RandomGenerator -> Ray -> World -> Integer -> IO Vector3
 rayColor _ _ _ 0 = pure (Vector3 0 0 0)
 rayColor generator r world depth =
     let unitDirection = unit (direction r)
-        a = 0.5 * getY unitDirection + 1.0
+        a = 0.5 * (getY unitDirection + 1.0)
         hitResult = hit world r (0.001, infinity)
      in case hitResult of
             Just hitted -> do

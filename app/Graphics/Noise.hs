@@ -5,7 +5,7 @@ import qualified Data.Vector.Mutable as MV
 
 import Control.Monad (forM_, replicateM)
 import Data.Bits (Bits (xor), (.&.))
-import Math (Point3, RandomGenerator, Vector3 (Vector3), dot, getX, getY, getZ, randomFloat, randomVectorInRange, (.*))
+import Math (Point3, RandomGenerator, Vector3 (Vector3), dot, getX, getY, getZ, randomFloat, randomVectorInRange, (*.), (.*))
 import System.Random (randomRIO)
 
 data Perlin = Perlin
@@ -63,6 +63,20 @@ noise perlin p =
     makeCorners :: Int -> Int -> Int -> [Corner]
     makeCorners i j k =
         [hashCorner i j k di dj dk | di <- [0, 1], dj <- [0, 1], dk <- [0, 1]]
+
+turb :: Perlin -> Point3 -> Int -> Float
+turb perlin p depth =
+    abs (go depth 1 p 0)
+  where
+    go :: Int -> Float -> Point3 -> Float -> Float
+    go remaining weight currentPoint accum
+        | remaining <= 0 = accum
+        | otherwise =
+            go
+                (remaining - 1)
+                (weight * 0.5)
+                (currentPoint *. 2)
+                (accum + weight * noise perlin currentPoint)
 
 makePerlinNoise :: RandomGenerator -> Int -> IO Perlin
 makePerlinNoise gen size = do
