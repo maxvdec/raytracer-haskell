@@ -3,11 +3,11 @@
 
 module Geometry.Hit where
 
+import Geometry.AABB (AABB)
 import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t))
 import Geometry.Ray (Ray (direction))
 import Graphics.Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3, dot)
-import Geometry.AABB (AABB)
 
 data Hit = Hit
     { info :: HitInfo

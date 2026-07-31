@@ -3,11 +3,12 @@
 
 module Graphics.Materials where
 
-import GHC.Generics (Meta)
-import Geometry.HitInfo (HitInfo (normal, p, isFront))
-import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Math (Color, RandomGenerator, nearZero, randomUnitVector, reflect, unit, (.*), dot, Vector3(..), refract, randomFloat)
 import Data.Ord (clamp)
+import GHC.Generics (Meta)
+import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
+import Geometry.Ray (Ray (Ray, direction, origin, time))
+import Graphics.Texture (SomeTexture, Texture (sample))
+import Math (Color, RandomGenerator, Vector3 (..), dot, nearZero, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
     scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
@@ -18,7 +19,7 @@ instance Material SomeMaterial where
     scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter (SomeMaterial mat) = scatter mat
 
-newtype Lambertian = Lambertian {lambertianAlbedo :: Color}
+newtype Lambertian = Lambertian {lambertianTexture :: SomeTexture}
 
 instance Material Lambertian where
     scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
@@ -33,7 +34,7 @@ instance Material Lambertian where
                             , direction = normal hitted
                             , time = (time r)
                             }
-                pure (Just (lambertianAlbedo mat, scattered))
+                pure (Just (sampleTexture, scattered))
             else do
                 let scattered =
                         Ray
@@ -41,12 +42,17 @@ instance Material Lambertian where
                             , direction = scatterDirection
                             , time = (time r)
                             }
-                pure (Just (lambertianAlbedo mat, scattered))
+                pure (Just (sampleTexture, scattered))
+      where
+        sampleTexture :: Color
+        sampleTexture =
+            let tex = (lambertianTexture mat)
+             in sample tex (uv hitted) (p hitted)
 
-makeLambertian :: Color -> Lambertian
-makeLambertian col =
+makeLambertian :: SomeTexture -> Lambertian
+makeLambertian tex =
     Lambertian
-        { lambertianAlbedo = col
+        { lambertianTexture = tex
         }
 
 data Metal = Metal {metalAlbedo :: Color, fuzz :: Float}
@@ -60,38 +66,37 @@ instance Material Metal where
         let scattered =
                 Ray
                     { origin = p hitted
-                    , direction = fuzzedReflected 
+                    , direction = fuzzedReflected
                     , time = (time ray)
                     }
         let check = (dot (direction scattered) (normal hitted)) > 0
-        if check then
-            pure (Just (metalAlbedo mat, scattered))
-        else
-            pure Nothing
+        if check
+            then
+                pure (Just (metalAlbedo mat, scattered))
+            else
+                pure Nothing
 
 makeMetal :: Color -> Float -> Metal
 makeMetal col fuz =
-    let clampedFuzz = clamp (0, 1) fuz in 
-    Metal
-        { metalAlbedo = col
-        , fuzz = clampedFuzz
-        }
+    let clampedFuzz = clamp (0, 1) fuz
+     in Metal
+            { metalAlbedo = col
+            , fuzz = clampedFuzz
+            }
 
-data Dielectric = Dielectric { refractionIndex :: Float }
+data Dielectric = Dielectric {refractionIndex :: Float}
 
 reflectance :: Dielectric -> Float -> Float
 reflectance mat cosine =
-    let refIndex = refractionIndex mat 
+    let refIndex = refractionIndex mat
         r0 = ((1 - refIndex) / (1 + refIndex)) ^ (2 :: Integer)
-    in
-    r0 + (1 - r0) * ((1 - cosine) ^ (5 :: Integer))
-    
+     in r0 + (1 - r0) * ((1 - cosine) ^ (5 :: Integer))
 
 instance Material Dielectric where
     scatter :: Dielectric -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter mat rgen ray hitted = do
         randomSchlick <- randomFloat rgen
-        
+
         let attenuation = (Vector3 1 1 1)
         let ri = if (isFront hitted) then 1.0 / (refractionIndex mat) else (refractionIndex mat)
 
@@ -101,15 +106,16 @@ instance Material Dielectric where
         let cannotRefract = (ri * sinTheta) > 1.0
         let schlickParameter = (reflectance mat cosTheta) > randomSchlick
         let scatterDirection = if (cannotRefract || schlickParameter) then reflect unitDirection (normal hitted) else refract unitDirection (normal hitted) ri
-        let scattered = Ray {
-            origin = (p hitted)
-            , direction = scatterDirection 
-            , time = (time ray)
-        }
+        let scattered =
+                Ray
+                    { origin = (p hitted)
+                    , direction = scatterDirection
+                    , time = (time ray)
+                    }
         pure (Just (attenuation, scattered))
 
 makeDielectric :: Float -> Dielectric
 makeDielectric refr =
-    Dielectric {
-        refractionIndex = refr
-    }
+    Dielectric
+        { refractionIndex = refr
+        }
