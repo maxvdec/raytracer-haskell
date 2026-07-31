@@ -5,11 +5,11 @@ import qualified Data.Vector.Mutable as MV
 
 import Control.Monad (forM_, replicateM)
 import Data.Bits (Bits (xor), (.&.))
-import Math (Point3, RandomGenerator, getX, getY, getZ, randomFloat)
+import Math (Point3, RandomGenerator, Vector3 (Vector3), dot, getX, getY, getZ, randomFloat, randomVectorInRange, (.*))
 import System.Random (randomRIO)
 
 data Perlin = Perlin
-    { noiseRandfloat :: V.Vector Float
+    { noiseRandvec :: V.Vector Vector3
     , permX :: V.Vector Int
     , permY :: V.Vector Int
     , permZ :: V.Vector Int
@@ -45,11 +45,11 @@ noise perlin p =
         k = floor (getZ p) :: Int
 
         corners = makeCorners i j k
-     in trilinearInterpolation corners u v w
+     in perlinInterpolation corners u v w
   where
     hashCorner :: Int -> Int -> Int -> Int -> Int -> Int -> Corner
     hashCorner i j k di dj dk =
-        let elems = V.length (noiseRandfloat perlin)
+        let elems = V.length (noiseRandvec perlin)
             wrappedX = (i + di) .&. (elems - 1)
             wrappedY = (j + dj) .&. (elems - 1)
             wrappedZ = (k + dk) .&. (elems - 1)
@@ -58,7 +58,7 @@ noise perlin p =
             permutedZ = (permZ perlin) V.! wrappedZ
 
             noiseIndex = permutedX `xor` permutedY `xor` permutedZ
-         in (noiseRandfloat perlin) V.! noiseIndex
+         in (noiseRandvec perlin) V.! noiseIndex
 
     makeCorners :: Int -> Int -> Int -> [Corner]
     makeCorners i j k =
@@ -66,39 +66,50 @@ noise perlin p =
 
 makePerlinNoise :: RandomGenerator -> Int -> IO Perlin
 makePerlinNoise gen size = do
-    randomNumbers <- V.replicateM size (randomFloat gen)
+    randomNumbers <- V.replicateM size (randomVectorInRange gen (-1, 1))
     permutationX <- makePermutation size
     permutationY <- makePermutation size
     permutationZ <- makePermutation size
     pure
         ( Perlin
-            { noiseRandfloat = randomNumbers
+            { noiseRandvec = randomNumbers
             , permX = permutationX
             , permY = permutationY
             , permZ = permutationZ
             }
         )
 
-type Corner = Float
+type Corner = Vector3
 
-trilinearInterpolation :: [Corner] -> Float -> Float -> Float -> Float
-trilinearInterpolation [] _ _ _ = 0
-trilinearInterpolation (corner : corners) u v w =
-    let (x, y, z) = getCornerCoordinatesForIndex (7 - (length corners))
-        weight = getWeightForCorner x y z
-     in (weight * corner) + trilinearInterpolation corners u v w
+perlinInterpolation :: [Corner] -> Float -> Float -> Float -> Float
+perlinInterpolation [] _ _ _ = 0
+perlinInterpolation (corner : corners) u v w =
+    let
+        (u', v', w') = (hermiteSmoothing u, hermiteSmoothing v, hermiteSmoothing w)
+        (x, y, z) = getCornerCoordinatesForIndex (7 - (length corners))
+        weight = getWeightForCorner x y z u' v' w'
+        offset = getOffset x y z
+     in
+        (weight * dot corner offset) + perlinInterpolation corners u v w
   where
-    getWeightForCorner :: Int -> Int -> Int -> Float
-    getWeightForCorner x y z =
-        let weightX = contrib x u
-            weightY = contrib y v
-            weightZ = contrib z w
-         in weightX * weightY * weightZ
+    getWeightForCorner :: Int -> Int -> Int -> Float -> Float -> Float -> Float
+    getWeightForCorner x y z u' v' w' =
+        let weightX = contrib x u'
+            weightY = contrib y v'
+            weightZ = contrib z w'
+         in (weightX * weightY * weightZ)
       where
         contrib :: Int -> Float -> Float
         contrib n coord =
             if n == 1 then coord else 1 - coord
 
+    getOffset :: Int -> Int -> Int -> Vector3
+    getOffset x y z =
+        Vector3 (u - (fromIntegral x)) (v - (fromIntegral y)) (w - (fromIntegral z))
+
     getCornerCoordinatesForIndex :: Int -> (Int, Int, Int)
     getCornerCoordinatesForIndex i =
         (i `div` 4, (i `div` 2) `mod` 2, i `mod` 2)
+
+    hermiteSmoothing :: Float -> Float
+    hermiteSmoothing n = n * n * (3 - 2 * n)

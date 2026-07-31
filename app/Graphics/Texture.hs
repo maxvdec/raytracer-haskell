@@ -109,19 +109,22 @@ instance Texture ImageTexture where
 
 data NoiseTexture = NoiseTexture
     { perlinNoise :: Perlin
+    , noiseFrequency :: Float
     }
 
 instance Texture NoiseTexture where
     sample tex _ p =
         let perlin = (perlinNoise tex)
-         in (Vector3 1 1 1) *. (noise perlin p)
+            scale = (noiseFrequency tex)
+         in (Vector3 1 1 1) *. 0.5 *. (1.0 + (noise perlin (p *. scale)))
 
-makeNoiseTexture :: IO NoiseTexture
-makeNoiseTexture = do
+makeNoiseTexture :: Float -> IO NoiseTexture
+makeNoiseTexture freq = do
     randGen <- makeRandomGenerator
     perlin <- makePerlinNoise randGen 256
     pure
         ( NoiseTexture
             { perlinNoise = perlin
+            , noiseFrequency = freq
             }
         )

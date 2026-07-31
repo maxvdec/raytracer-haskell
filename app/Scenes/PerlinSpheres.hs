@@ -29,7 +29,7 @@ perlinSpheresCamera res =
 
 perlinSpheresWorld :: IO World
 perlinSpheresWorld = do
-    noiseTexture <- makeNoiseTexture
+    noiseTexture <- makeNoiseTexture 4
     let surface = makeLambertian (SomeTexture noiseTexture)
         ground = makeSphere (Vector3 0 (-1000) 0) 1000 (SomeMaterial surface)
         sphere = makeSphere (Vector3 0 2 0) 2 (SomeMaterial surface)
