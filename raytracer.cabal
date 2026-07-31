@@ -69,6 +69,7 @@ executable raytracer
         Geometry.Hit
         Geometry.HitInfo
         Geometry.AABB
+        Geometry.BVH
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
