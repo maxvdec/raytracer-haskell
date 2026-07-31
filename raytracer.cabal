@@ -75,6 +75,7 @@ executable raytracer
         Graphics.Noise
         Scenes.PerlinSpheres
         Scenes.Quads
+        Scenes.SimpleLight
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

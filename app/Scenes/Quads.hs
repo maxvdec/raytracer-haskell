@@ -23,6 +23,7 @@ quadsSceneCamera res =
         , focusDist = 3.58
         , defocusDiskU = (Vector3 0 0 0)
         , defocusDiskV = (Vector3 0 0 0)
+        , backgroundColor = (Vector3 0.7 0.8 1)
         }
         |> fillViewportResolution
         |> fillDiskInfo

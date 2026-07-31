@@ -4,10 +4,11 @@ import Control.Concurrent.Async (mapConcurrently)
 import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import GHC.Conc (getNumCapabilities)
 import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP, hitT)
+import Geometry.HitInfo (HitInfo (p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at)
-import Geometry.Scene (Camera (maxDepth, samplesPerPixel), World, makeRayForCoordinate)
+import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, makeRayForCoordinate)
 import Graphics.Image (putColor)
-import Graphics.Materials (Material (scatter))
+import Graphics.Materials (Material (emit, scatter))
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, makeRandomGenerator, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
@@ -106,8 +107,8 @@ colorNormal :: Hit -> Color
 colorNormal h =
     0.5 .* (hitNormal h + Vector3 1 1 1)
 
-colorGradient :: RandomGenerator -> Hit -> World -> Integer -> IO Color
-colorGradient generator h world depth = do
+colorGradient :: RandomGenerator -> Camera -> Hit -> World -> Integer -> IO Color
+colorGradient generator cam h world depth = do
     dir <- randomInHemisphere generator (hitNormal h)
     let ray =
             Ray
@@ -115,31 +116,51 @@ colorGradient generator h world depth = do
                 , direction = dir + hitNormal h
                 , time = 0
                 }
-    bounces <- rayColor generator ray world (depth - 1)
+    bounces <- rayColor generator cam ray world (depth - 1)
     pure (0.5 .* bounces)
 
-colorScattering :: RandomGenerator -> Hit -> Ray -> World -> Integer -> IO Color
-colorScattering generator h r world depth = do
+colorScattering :: RandomGenerator -> Camera -> Hit -> Ray -> World -> Integer -> IO Color
+colorScattering generator cam h r world depth = do
     let hitMaterial = material h
-    result <- scatter hitMaterial generator r (info h)
-    case result of
-        Nothing -> pure (Vector3 0 0 0)
-        Just (attenuation, scattered) -> do
-            bounces <- rayColor generator scattered world (depth - 1)
-            pure (attenuation * bounces)
+        hitInformation = info h
+        colorFromEmission = emit hitMaterial (uv hitInformation) (p hitInformation)
 
-rayColor :: RandomGenerator -> Ray -> World -> Integer -> IO Vector3
-rayColor _ _ _ 0 = pure (Vector3 0 0 0)
-rayColor generator r world depth =
-    let unitDirection = unit (direction r)
-        a = 0.5 * (getY unitDirection + 1.0)
-        hitResult = hit world r (0.001, infinity)
-     in case hitResult of
-            Just hitted -> do
-                colorScattering generator hitted r world depth
-            _ -> pure (((1.0 - a) .* Vector3 1 1 1) + (a .* Vector3 0.5 0.7 1))
+    scatterResult <- scatter hitMaterial generator r hitInformation
+
+    case scatterResult of
+        Nothing ->
+            pure colorFromEmission
+        Just (attenuation, scattered) -> do
+            bouncedColor <-
+                rayColor generator cam scattered world (depth - 1)
+
+            let colorFromScatter = attenuation * bouncedColor
+            pure (colorFromEmission + colorFromScatter)
+
+rayColor ::
+    RandomGenerator ->
+    Camera ->
+    Ray ->
+    World ->
+    Integer ->
+    IO Color
+rayColor _ _ _ _ depth
+    | depth <= 0 =
+        pure (Vector3 0 0 0)
+rayColor generator camera r world depth =
+    case hit world r (0.001, infinity) of
+        Just hitted ->
+            colorScattering
+                generator
+                camera
+                hitted
+                r
+                world
+                depth
+        Nothing ->
+            pure (backgroundColor camera)
 
 rayPass :: Camera -> World -> RandomGenerator -> Resolution -> ImageCoord -> IO Color
 rayPass cam world generator _ (x, y) = do
     ray <- makeRayForCoordinate generator cam x y
-    rayColor generator ray world (maxDepth cam)
+    rayColor generator cam ray world (maxDepth cam)

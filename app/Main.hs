@@ -3,6 +3,7 @@ module Main (main) where
 import Data.Char (toLower)
 import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
+import Geometry.HitInfo (HitInfo (normal))
 import Geometry.Scene (Camera (Camera, defocusAngle, defocusDiskU, defocusDiskV, focusDist, fov, lookat, lookfrom, maxDepth, resolution, samplesPerPixel, viewportResolution, vup), Scene, World (World, hittables), fillDiskInfo, fillViewportResolution)
 import Geometry.Shapes
 import Graphics.Image
@@ -12,6 +13,7 @@ import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator
 import Renders (computedImage, rayPass)
 import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.Quads (quadsScene)
+import Scenes.SimpleLight (simpleLightScene)
 import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
@@ -30,10 +32,11 @@ matchScene name res = case (map toLower name) of
     "world" -> worldScene res
     "perlin" -> perlinSpheresScene res
     "quads" -> quadsScene res
+    "simple_light" -> simpleLightScene res
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
-currentResolution = normalResolution
+currentResolution = devResolution
 
 main :: IO ()
 main = do

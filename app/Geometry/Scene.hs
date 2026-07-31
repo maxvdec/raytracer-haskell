@@ -5,7 +5,7 @@ module Geometry.Scene where
 import Geometry.AABB (AABB (AABB, axisX, axisY, axisZ), aabbFromAABBs)
 import Geometry.Hit (Hit, Hittable (boundingBox, hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInRange, randomInUnitDisk, randomUnitVector, unit, vecLength, (*.), (.*), (/.))
+import Math (Color, Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInRange, randomInUnitDisk, randomUnitVector, unit, vecLength, (*.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
 
@@ -24,6 +24,7 @@ data Camera = Camera
     , focusDist :: Float
     , defocusDiskU :: Vector3
     , defocusDiskV :: Vector3
+    , backgroundColor :: Color
     }
 
 fillViewportResolution :: Camera -> Camera

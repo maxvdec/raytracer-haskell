@@ -8,16 +8,21 @@ import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Graphics.Texture (SomeTexture (SomeTexture), Texture (sample), makeSolidColor)
-import Math (Color, RandomGenerator, Vector3 (..), dot, nearZero, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
+import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
     scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter _ _ _ _ = pure Nothing
+
+    emit :: a -> TextureCoord -> Point3 -> Color
+    emit _ _ _ = (Vector3 0 0 0)
 
 data SomeMaterial = forall a. (Material a) => SomeMaterial a
 
 instance Material SomeMaterial where
     scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter (SomeMaterial mat) = scatter mat
+    emit (SomeMaterial mat) = emit mat
 
 newtype Lambertian = Lambertian {lambertianTexture :: SomeTexture}
 
@@ -124,4 +129,24 @@ makeDielectric :: Float -> Dielectric
 makeDielectric refr =
     Dielectric
         { refractionIndex = refr
+        }
+
+newtype Light = Light
+    { emissionTexture :: SomeTexture
+    }
+
+instance Material Light where
+    emit light coords point =
+        sample (emissionTexture light) coords point
+
+makeLight :: SomeTexture -> Light
+makeLight tex =
+    Light
+        { emissionTexture = tex
+        }
+
+makeLightFromColor :: Color -> Light
+makeLightFromColor col =
+    Light
+        { emissionTexture = SomeTexture (makeSolidColor col)
         }
