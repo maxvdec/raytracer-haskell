@@ -33,9 +33,12 @@ makePermutation size =
 
 noise :: Perlin -> Point3 -> Float
 noise perlin p =
-    let u = (getX p) - fromInteger (floor (getX p))
-        v = (getY p) - fromInteger (floor (getY p))
-        w = (getZ p) - fromInteger (floor (getZ p))
+    let u' = (getX p) - fromInteger (floor (getX p))
+        v' = (getY p) - fromInteger (floor (getY p))
+        w' = (getZ p) - fromInteger (floor (getZ p))
+        u = u' * u' * (3 - 2 * u')
+        v = v' * v' * (3 - 2 * v')
+        w = w' * w' * (3 - 2 * w')
 
         i = floor (getX p) :: Int
         j = floor (getY p) :: Int
