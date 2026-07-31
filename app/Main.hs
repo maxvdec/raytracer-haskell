@@ -19,8 +19,8 @@ devResolution = (400, 225)
 mediumResolution :: Resolution
 mediumResolution = (800, 450)
 
-makeWorld :: IO World
-makeWorld = do
+makeWorld :: World
+makeWorld = 
     let materialGround = makeLambertian (Vector3 0.8 0.8 0)
         materialCenter = makeLambertian (Vector3 0.1 0.2 0.5)
         materialLeft = makeDielectric (1.0 / 1.33)
@@ -30,9 +30,8 @@ makeWorld = do
         leftSphere = makeSphere (Vector3 (-1) 0 (-1)) 0.5 (SomeMaterial materialLeft)
         rightSphere = makeSphere (Vector3 1 0 (-1)) 0.5 (SomeMaterial materialRight)
         scene = [SomeHittable groundSphere, SomeHittable centerSphere, SomeHittable leftSphere, SomeHittable rightSphere] 
-    bvhRandomGenerator <- makeRandomGenerator
-    root <- createBVHTree bvhRandomGenerator scene
-    pure (World { hittables = [SomeHittable root] })
+        root = createBVHTree scene in
+    World { hittables = [SomeHittable root] }
     
 
 main :: IO ()
@@ -53,10 +52,9 @@ main =
                 , defocusDiskV = (Vector3 0 0 0)
                 } |> fillViewportResolution |> fillDiskInfo 
      in withFile "./output.ppm" WriteMode $ \handle -> do
-            world <- makeWorld
             hPutStr handle (ppmHeader mediumResolution)
             computedImage
-                (rayPass camera world)
+                (rayPass camera makeWorld)
                 handle
                 mediumResolution
                 camera

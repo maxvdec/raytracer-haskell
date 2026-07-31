@@ -1,5 +1,5 @@
 module Geometry.AABB where
-import Math (Interval, Point3, getX, getY, getZ, getAxisFromVec3, surrounds, enclose)
+import Math (Interval, Point3, getX, getY, getZ, getAxisFromVec3, surrounds, enclose, sizeOfInterval)
 import Geometry.Ray (Ray (origin, direction))
 import Control.Monad (foldM)
 
@@ -44,6 +44,16 @@ getAxisFromAABB aabb i
     | i == 2 = axisZ aabb
     | otherwise = axisX aabb
 
+getLongestAxisFromAABB :: AABB -> Integer
+getLongestAxisFromAABB aabb =
+    let lengthX = sizeOfInterval (axisX aabb)
+        lengthY = sizeOfInterval (axisY aabb)
+        lengthZ = sizeOfInterval (axisZ aabb) in
+    if lengthX > lengthY then
+        if lengthX > lengthZ then 0 else 2
+    else
+        if lengthY > lengthZ then 1 else 2
+    
 hitAABB :: AABB -> Ray -> Interval -> Maybe Interval
 hitAABB aabb r rayT = do
     foldM hitAxis rayT [0, 1, 2]

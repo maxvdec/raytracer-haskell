@@ -1,6 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 module Geometry.BVH where
-import Geometry.AABB (AABB, hitAABB, getAxisFromAABB, aabbFromAABBs)
+import Geometry.AABB (AABB (AABB), hitAABB, getAxisFromAABB, aabbFromAABBs, getLongestAxisFromAABB)
 import Geometry.Hit (SomeHittable (SomeHittable), Hittable (hit, boundingBox), Hit (info))
 import Geometry.Ray (Ray)
 import Math (Interval, RandomGenerator, randomInt)
@@ -44,16 +44,16 @@ instance Hittable BVH where
     boundingBox (Leaf aabb _) = aabb
     boundingBox (Branch aabb _ _) = aabb
 
-createBVHTree :: RandomGenerator -> [SomeHittable] -> IO BVH
-createBVHTree _ [] = error "Cannot construct BVH from empty list"
-createBVHTree _ [obj] = pure (Leaf (boundingBox obj) obj)
-createBVHTree _ [obj1, obj2] = pure (Branch 
+createBVHTree :: [SomeHittable] -> BVH
+createBVHTree [] = error "Cannot construct BVH from empty list"
+createBVHTree [obj] = Leaf (boundingBox obj) obj
+createBVHTree [obj1, obj2] = Branch 
     (aabbFromAABBs (boundingBox obj1) (boundingBox obj2)) 
     (Leaf (boundingBox obj1) obj1) 
-    (Leaf (boundingBox obj2) obj2))
-createBVHTree gen objects = do
-    axis <- randomInt gen (0, 2)
-    let comparator = 
+    (Leaf (boundingBox obj2) obj2)
+createBVHTree objects =
+    let axis = getLongestAxis
+        comparator = 
             case axis of
             0 -> boxXCompare
             1 -> boxYCompare
@@ -61,13 +61,22 @@ createBVHTree gen objects = do
         sorted = sortBy comparator objects
         middle = length sorted `div` 2
         (leftObjects, rightObjects) = splitAt middle sorted
-    leftBVH <- createBVHTree gen leftObjects
-    rightBVH <- createBVHTree gen rightObjects
-    pure (Branch 
+        leftBVH = createBVHTree leftObjects
+        rightBVH = createBVHTree rightObjects in
+    Branch 
         (aabbFromAABBs (boundingBox leftBVH) (boundingBox rightBVH)) 
         leftBVH
-        rightBVH)
-    
+        rightBVH
+
+        where
+            getLongestAxis :: Integer
+            getLongestAxis = getLongestAxisFromAABB (buildObjectsAABB objects)
+
+            buildObjectsAABB :: [SomeHittable] -> AABB
+            buildObjectsAABB [] = error "Cannot build box with no objects"
+            buildObjectsAABB [obj] = boundingBox obj
+            buildObjectsAABB (obj : os) = aabbFromAABBs (boundingBox obj) (buildObjectsAABB os)
+            
 
 compareBox :: SomeHittable -> SomeHittable -> Integer -> Ordering
 compareBox a b axisIndex =
