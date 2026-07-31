@@ -2,19 +2,21 @@
 
 module Geometry.Scene where
 
-import Geometry.Hit (Hit, Hittable (hit, boundingBox), SomeHittable, hitT)
+import Geometry.AABB (AABB (AABB, axisX, axisY, axisZ), aabbFromAABBs)
+import Geometry.Hit (Hit, Hittable (boundingBox, hit), SomeHittable, hitT)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, randomInRange,  (.*), (/.), degreesToRadians, vecLength, unit, cross, (*.), randomUnitVector, randomInUnitDisk, randomFloat, infinity)
-import Geometry.AABB (AABB (axisZ, axisY, axisX, AABB), aabbFromAABBs)
+import Math (Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInRange, randomInUnitDisk, randomUnitVector, unit, vecLength, (*.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
+
+type Scene = Resolution -> (Camera, IO World)
 
 data Camera = Camera
     { viewportResolution :: ViewportResolution
     , resolution :: Resolution
     , samplesPerPixel :: Integer
     , maxDepth :: Integer
-    , fov :: Float 
+    , fov :: Float
     , lookfrom :: Vector3
     , lookat :: Vector3
     , vup :: Vector3
@@ -24,7 +26,6 @@ data Camera = Camera
     , defocusDiskV :: Vector3
     }
 
-
 fillViewportResolution :: Camera -> Camera
 fillViewportResolution cam =
     let theta = degreesToRadians (fov cam)
@@ -32,31 +33,29 @@ fillViewportResolution cam =
         h = tan (theta / 2)
         viewportHeight = 2 * h * (focusDist cam)
         viewportWidth = viewportHeight * ((fromInteger resX) / (fromInteger resY))
-    in
-        cam
+     in cam
             { viewportResolution = (viewportWidth, viewportHeight)
-                , resolution = (resX, resY)
+            , resolution = (resX, resY)
             }
 
 fillDiskInfo :: Camera -> Camera
 fillDiskInfo cam =
     let defocusRadius = (focusDist cam) * tan (degreesToRadians ((defocusAngle cam) / 2))
-        w = unit ((lookfrom cam) - (lookat cam)) 
+        w = unit ((lookfrom cam) - (lookat cam))
         u = unit (cross (vup cam) w)
-        v = cross w u in
-    cam {
-        defocusDiskU = u *. defocusRadius
-        , defocusDiskV = v *. defocusRadius
-    }
-    
+        v = cross w u
+     in cam
+            { defocusDiskU = u *. defocusRadius
+            , defocusDiskV = v *. defocusRadius
+            }
 
 calculateUV :: Camera -> (Vector3, Vector3)
 calculateUV cam =
-    let w = unit ((lookfrom cam) - (lookat cam)) 
+    let w = unit ((lookfrom cam) - (lookat cam))
         u = unit (cross (vup cam) w)
         v = cross w u
-        (viewportWidth, viewportHeight) = viewportResolution cam in
-    (u *. viewportWidth, (-v) *. viewportHeight)
+        (viewportWidth, viewportHeight) = viewportResolution cam
+     in (u *. viewportWidth, (-v) *. viewportHeight)
 
 calculateDeltaUV :: Camera -> (Vector3, Vector3)
 calculateDeltaUV cam =
@@ -68,24 +67,25 @@ calculateDeltaUV cam =
 
 calculateTopLeftPos :: Camera -> Vector3
 calculateTopLeftPos cam =
-    let 
+    let
         (viewportU, viewportV) = calculateUV cam
         (deltaU, deltaV) = calculateDeltaUV cam
-        w = unit ((lookfrom cam) - (lookat cam)) 
-        focalVector = (focusDist cam) .* w 
+        w = unit ((lookfrom cam) - (lookat cam))
+        focalVector = (focusDist cam) .* w
 
         viewportUpperLeft =
             (lookfrom cam)
                 - focalVector
                 - viewportU /. 2
                 - viewportV /. 2
-     in viewportUpperLeft + 0.5 .* (deltaU + deltaV)
+     in
+        viewportUpperLeft + 0.5 .* (deltaU + deltaV)
 
 makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ray
 makeRayForCoordinate generator cam x y =
     let (deltaU, deltaV) = calculateDeltaUV cam
         pixel0Pos = calculateTopLeftPos cam
-        camCenter = lookfrom cam 
+        camCenter = lookfrom cam
      in do
             offset <- sampleSquare
             randomUnit <- defocusDiskSample generator
@@ -94,8 +94,8 @@ makeRayForCoordinate generator cam x y =
             let rayOrigin = if (defocusAngle cam) <= 0 then camCenter else randomUnit
             pure
                 ( Ray
-                    { origin = rayOrigin 
-                    , direction = sampleLoc - rayOrigin 
+                    { origin = rayOrigin
+                    , direction = sampleLoc - rayOrigin
                     , time = rayTime
                     }
                 )
@@ -112,7 +112,7 @@ makeRayForCoordinate generator cam x y =
         p <- randomInUnitDisk rand
         let result = lookfrom cam + ((getX p) .* (defocusDiskU cam)) + ((getY p) .* (defocusDiskV cam))
         pure result
-        
+
 newtype World = World
     { hittables :: [SomeHittable]
     }
@@ -139,12 +139,13 @@ instance Hittable World where
         getClosestHit world r interval Nothing (snd interval)
 
     boundingBox :: World -> AABB
-    boundingBox (World []) = AABB {
-        axisX = (infinity, -infinity)
-        , axisY = (infinity, -infinity)
-        , axisZ = (infinity, -infinity)
-    }
+    boundingBox (World []) =
+        AABB
+            { axisX = (infinity, -infinity)
+            , axisY = (infinity, -infinity)
+            , axisZ = (infinity, -infinity)
+            }
     boundingBox (World [obj]) = boundingBox obj
-    boundingBox (World (obj : objects)) = 
-        let newWorld = World { hittables = objects } in
-        aabbFromAABBs (boundingBox obj) (boundingBox newWorld)
+    boundingBox (World (obj : objects)) =
+        let newWorld = World{hittables = objects}
+         in aabbFromAABBs (boundingBox obj) (boundingBox newWorld)
