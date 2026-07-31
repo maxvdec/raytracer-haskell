@@ -3,7 +3,9 @@
 
 module Graphics.Texture where
 
-import Math (Color, TextureCoord, Vector3, getX, getY, getZ)
+import Codec.Picture (Image (imageHeight, imageWidth), Pixel (pixelAt), PixelRGB8 (PixelRGB8), convertRGB8, readImage)
+import Data.Ord (clamp)
+import Math (Color, TextureCoord, Vector3 (Vector3), getX, getY, getZ)
 
 class Texture a where
     sample :: a -> TextureCoord -> Vector3 -> Color
@@ -59,3 +61,47 @@ makeCheckerFromTextures scale t1 t2 =
         , evenTexture = t1
         , oddTexture = t2
         }
+
+data ImageTexture = ImageTexture
+    { textureImage :: !(Image PixelRGB8)
+    }
+
+loadImageTexture :: FilePath -> IO ImageTexture
+loadImageTexture path = do
+    result <- readImage path
+
+    case result of
+        Left errorMessage ->
+            fail ("Could not load texture: " ++ errorMessage)
+        Right dynamicImage ->
+            pure
+                ImageTexture
+                    { textureImage = convertRGB8 dynamicImage
+                    }
+
+instance Texture ImageTexture where
+    sample texture (u, v) _ =
+        let image = textureImage texture
+            width = imageWidth image
+            height = imageHeight image
+
+            clampedU = clamp (0, 1) u
+            clampedV = 1 - (clamp (0, 1) v)
+
+            x =
+                min
+                    (width - 1)
+                    (floor (clampedU * fromIntegral width))
+
+            y =
+                min
+                    (height - 1)
+                    (floor (clampedV * fromIntegral height))
+
+            PixelRGB8 red green blue = pixelAt image x y
+
+            scale = 1 / 255
+         in Vector3
+                (fromIntegral red * scale)
+                (fromIntegral green * scale)
+                (fromIntegral blue * scale)

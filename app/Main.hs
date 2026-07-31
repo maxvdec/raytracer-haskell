@@ -6,7 +6,7 @@ import Geometry.Scene (Camera (Camera, defocusAngle, defocusDiskU, defocusDiskV,
 import Geometry.Shapes
 import Graphics.Image
 import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLambertian, makeMetal)
-import Graphics.Texture (SomeTexture (SomeTexture), makeCheckerFromColors, makeSolidColor)
+import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeCheckerFromColors, makeSolidColor)
 import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
 import Renders (computedImage, rayPass)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
@@ -20,19 +20,15 @@ devResolution = (400, 225)
 mediumResolution :: Resolution
 mediumResolution = (800, 450)
 
-makeWorld :: World
-makeWorld =
-    let materialGround = makeLambertian (SomeTexture (makeCheckerFromColors 0.32 (Vector3 0.2 0.3 0.1) (Vector3 0.9 0.9 0.9)))
-        materialCenter = makeLambertian (SomeTexture (makeSolidColor (Vector3 0.6 0.2 0.9)))
-        materialLeft = makeDielectric (1.0 / 1.33)
-        materialRight = makeMetal (Vector3 0.8 0.6 0.2) 1.0
-        groundSphere = makeSphere (Vector3 0 (-100.5) (-1)) 100 (SomeMaterial materialGround)
-        centerSphere = makeAnimatedSphere (Vector3 0 0 (-1.2)) (Vector3 0 0.3 (-1.2)) 0.5 (SomeMaterial materialCenter)
-        leftSphere = makeSphere (Vector3 (-1) 0 (-1)) 0.5 (SomeMaterial materialLeft)
-        rightSphere = makeSphere (Vector3 1 0 (-1)) 0.5 (SomeMaterial materialRight)
-        scene = [SomeHittable groundSphere, SomeHittable centerSphere, SomeHittable leftSphere, SomeHittable rightSphere]
+makeWorld :: IO World
+makeWorld = do
+    worldTexture <- loadImageTexture "./textures/earthmap.jpg"
+    let surface = makeLambertian (SomeTexture worldTexture)
+        globe = makeSphere (Vector3 0 0 0) 2 (SomeMaterial surface)
+        scene = [SomeHittable globe]
         root = createBVHTree scene
-     in World{hittables = [SomeHittable root]}
+
+    pure (World{hittables = [SomeHittable root]})
 
 main :: IO ()
 main =
@@ -42,11 +38,11 @@ main =
                 , resolution = mediumResolution
                 , samplesPerPixel = 100
                 , maxDepth = 50
-                , fov = 90
-                , lookfrom = (Vector3 (-2) 2 1)
-                , lookat = (Vector3 0 0 (-1))
+                , fov = 20
+                , lookfrom = (Vector3 0 0 12)
+                , lookat = (Vector3 0 0 0)
                 , vup = (Vector3 0 1 0)
-                , defocusAngle = 0.6
+                , defocusAngle = 0
                 , focusDist = 3.58
                 , defocusDiskU = (Vector3 0 0 0)
                 , defocusDiskV = (Vector3 0 0 0)
@@ -54,9 +50,10 @@ main =
                 |> fillViewportResolution
                 |> fillDiskInfo
      in withFile "./output.ppm" WriteMode $ \handle -> do
+            world <- makeWorld
             hPutStr handle (ppmHeader mediumResolution)
             computedImage
-                (rayPass camera makeWorld)
+                (rayPass camera world)
                 handle
                 mediumResolution
                 camera
