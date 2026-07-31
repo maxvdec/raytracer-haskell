@@ -2,7 +2,7 @@ module Geometry.AABB where
 
 import Control.Monad (foldM)
 import Geometry.Ray (Ray (direction, origin))
-import Math (Interval, Point3, enclose, getAxisFromVec3, getX, getY, getZ, sizeOfInterval, surrounds)
+import Math (Interval, Point3, enclose, expand, getAxisFromVec3, getX, getY, getZ, sizeOfInterval, surrounds, (|>))
 
 data AABB = AABB
     { axisX :: Interval
@@ -15,11 +15,13 @@ aabbFromPoints a b =
     let x = makeAxis a b getX
         y = makeAxis a b getY
         z = makeAxis a b getZ
-     in AABB
+     in ( AABB
             { axisX = x
             , axisY = y
             , axisZ = z
             }
+        )
+            |> padAABBToMinimums
   where
     makeAxis :: Point3 -> Point3 -> (Point3 -> Float) -> Interval
     makeAxis a' b' get =
@@ -30,11 +32,13 @@ aabbFromAABBs boxA boxB =
     let x = enclose (axisX boxA) (axisX boxB)
         y = enclose (axisY boxA) (axisY boxB)
         z = enclose (axisZ boxA) (axisZ boxB)
-     in AABB
+     in ( AABB
             { axisX = x
             , axisY = y
             , axisZ = z
             }
+        )
+            |> padAABBToMinimums
 
 getAxisFromAABB :: AABB -> Integer -> Interval
 getAxisFromAABB aabb i
@@ -81,3 +85,15 @@ hitAABB aabb r rayT = do
          in if rayMax <= rayMin
                 then Nothing
                 else Just (rayMin, rayMax)
+
+padAABBToMinimums :: AABB -> AABB
+padAABBToMinimums aabb =
+    let delta = 0.0001
+        newX = if sizeOfInterval (axisX aabb) < delta then expand (axisX aabb) delta else axisX aabb
+        newY = if sizeOfInterval (axisY aabb) < delta then expand (axisY aabb) delta else axisY aabb
+        newZ = if sizeOfInterval (axisZ aabb) < delta then expand (axisZ aabb) delta else axisZ aabb
+     in aabb
+            { axisX = newX
+            , axisY = newY
+            , axisZ = newZ
+            }
