@@ -226,6 +226,10 @@ randomFloat generator = uniformRM (0.0, 1.0) generator
 randomInRange :: RandomGenerator -> Interval -> IO Float
 randomInRange generator interval = uniformRM interval generator
 
+randomInt :: RandomGenerator -> (Integer, Integer) -> IO Integer
+randomInt generator interval =
+    uniformRM interval generator
+
 randomInUnitDisk :: RandomGenerator -> IO Vector3
 randomInUnitDisk gen = do
     randomx <- randomInRange gen (-1, 1)

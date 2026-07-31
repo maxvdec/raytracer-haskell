@@ -5,9 +5,10 @@ import Geometry.Scene (Camera (Camera, maxDepth, resolution, samplesPerPixel, vi
 import Geometry.Shapes
 import Image
 import Materials (SomeMaterial (SomeMaterial), makeLambertian, makeMetal, makeDielectric)
-import Math (Resolution, Vector3 (Vector3), (|>))
+import Math (Resolution, Vector3 (Vector3), (|>), RandomGenerator, makeRandomGenerator)
 import Renders (computedImage, rayPass)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
+import Geometry.BVH (createBVHTree)
 
 normalResolution :: Resolution
 normalResolution = (1920, 1080)
@@ -18,8 +19,8 @@ devResolution = (400, 225)
 mediumResolution :: Resolution
 mediumResolution = (800, 450)
 
-makeWorld :: World
-makeWorld =
+makeWorld :: IO World
+makeWorld = do
     let materialGround = makeLambertian (Vector3 0.8 0.8 0)
         materialCenter = makeLambertian (Vector3 0.1 0.2 0.5)
         materialLeft = makeDielectric (1.0 / 1.33)
@@ -28,9 +29,11 @@ makeWorld =
         centerSphere = makeAnimatedSphere (Vector3 0 0 (-1.2)) (Vector3 0 1.5 (-1.2)) 0.5 (SomeMaterial materialCenter)
         leftSphere = makeSphere (Vector3 (-1) 0 (-1)) 0.5 (SomeMaterial materialLeft)
         rightSphere = makeSphere (Vector3 1 0 (-1)) 0.5 (SomeMaterial materialRight)
-     in World
-            { hittables = [SomeHittable groundSphere, SomeHittable centerSphere, SomeHittable leftSphere, SomeHittable rightSphere]
-            }
+        scene = [SomeHittable groundSphere, SomeHittable centerSphere, SomeHittable leftSphere, SomeHittable rightSphere] 
+    bvhRandomGenerator <- makeRandomGenerator
+    root <- createBVHTree bvhRandomGenerator scene
+    pure (World { hittables = [SomeHittable root] })
+    
 
 main :: IO ()
 main =
@@ -40,19 +43,20 @@ main =
                 , resolution = mediumResolution
                 , samplesPerPixel = 100
                 , maxDepth = 50
-                , fov = 20
+                , fov = 90
                 , lookfrom = (Vector3 (-2) 2 1)
                 , lookat = (Vector3 0 0 (-1))
                 , vup = (Vector3 0 1 0)
-                , defocusAngle = 10
-                , focusDist = 3.4
+                , defocusAngle = 0.6
+                , focusDist = 3.58
                 , defocusDiskU = (Vector3 0 0 0)
                 , defocusDiskV = (Vector3 0 0 0)
                 } |> fillViewportResolution |> fillDiskInfo 
      in withFile "./output.ppm" WriteMode $ \handle -> do
+            world <- makeWorld
             hPutStr handle (ppmHeader mediumResolution)
             computedImage
-                (rayPass camera makeWorld)
+                (rayPass camera world)
                 handle
                 mediumResolution
                 camera
