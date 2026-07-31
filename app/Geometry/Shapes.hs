@@ -4,12 +4,14 @@
 module Geometry.Shapes where
 
 import Control.Applicative
+import Control.Monad (when)
 import GHC.Float (roundFloat)
 import Geometry.AABB (AABB, aabbFromAABBs, aabbFromPoints)
 import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), makeHit, setFaceNormal)
+import Geometry.HitInfo (HitInfo (uv))
 import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
 import Graphics.Materials (SomeMaterial)
-import Math (Interval, Point3, TextureCoord, Vector3 (Vector3), contains, dot, getX, getY, getZ, lengthSquared, (.*), (.-), (/.))
+import Math (Interval, Point3, TextureCoord, Vector3 (Vector3), contains, cross, dot, getX, getY, getZ, lengthSquared, unit, (.*), (.-), (/.))
 
 data Sphere = Sphere
     { center :: Ray
@@ -104,3 +106,81 @@ instance Hittable Sphere where
                 box1 = aabbFromPoints ((at cent 0) - rvec) ((at cent 0) + rvec)
                 box2 = aabbFromPoints ((at cent 1) - rvec) ((at cent 1) + rvec)
              in aabbFromAABBs box1 box2
+
+data Quad = Quad
+    { quadOrigin :: Point3
+    , quadU :: Vector3
+    , quadV :: Vector3
+    , quadMaterial :: SomeMaterial
+    }
+
+instance Hittable Quad where
+    hit :: Quad -> Ray -> Interval -> Maybe Hit
+    hit quad ray interval =
+        let denom = dot normal (direction ray)
+            t = (d - dot normal (origin ray)) / denom
+            intersection = at ray t
+
+            initialHit = makeHit intersection normal t False (quadMaterial quad) (0, 0)
+
+            isParallel = abs denom < 1e-8
+            notContained = not (contains interval t)
+         in if isParallel || notContained
+                then
+                    Nothing
+                else
+                    isInterior intersection (setFaceNormal initialHit ray normal)
+      where
+        normal :: Vector3
+        normal =
+            let n = cross (quadU quad) (quadV quad)
+             in unit n
+
+        d :: Float
+        d =
+            dot normal (quadOrigin quad)
+
+        w :: Vector3
+        w =
+            let n = cross (quadU quad) (quadV quad)
+             in n /. dot n n
+
+        getAlphaBeta :: Vector3 -> (Float, Float)
+        getAlphaBeta intersection =
+            let planarHitPtVector = intersection - (quadOrigin quad)
+                alpha = dot w (cross planarHitPtVector (quadV quad))
+                beta = dot w (cross (quadU quad) planarHitPtVector)
+             in (alpha, beta)
+
+        isInterior :: Vector3 -> Hit -> Maybe Hit
+        isInterior intersection hitted =
+            let unitInterval = (0, 1) :: Interval
+                (a, b) = getAlphaBeta intersection
+                missingA = not (contains unitInterval a)
+                missingB = not (contains unitInterval b)
+             in if missingA || missingB
+                    then Nothing
+                    else
+                        Just
+                            ( hitted
+                                { info =
+                                    (info hitted)
+                                        { uv = (a, b)
+                                        }
+                                }
+                            )
+
+    boundingBox :: Quad -> AABB
+    boundingBox quad =
+        let diagonal1 = aabbFromPoints (quadOrigin quad) (quadOrigin quad + quadU quad + quadV quad)
+            diagonal2 = aabbFromPoints (quadOrigin quad + quadU quad) (quadOrigin quad + quadV quad)
+         in aabbFromAABBs diagonal1 diagonal2
+
+makeQuad :: Point3 -> Vector3 -> Vector3 -> SomeMaterial -> Quad
+makeQuad org u v mat =
+    Quad
+        { quadOrigin = org
+        , quadU = u
+        , quadV = v
+        , quadMaterial = mat
+        }

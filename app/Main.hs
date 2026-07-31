@@ -11,6 +11,7 @@ import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeChecke
 import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
 import Renders (computedImage, rayPass)
 import Scenes.PerlinSpheres (perlinSpheresScene)
+import Scenes.Quads (quadsScene)
 import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
@@ -28,7 +29,11 @@ matchScene :: String -> Resolution -> (Camera, IO World)
 matchScene name res = case (map toLower name) of
     "world" -> worldScene res
     "perlin" -> perlinSpheresScene res
+    "quads" -> quadsScene res
     _ -> error "Scene does not exist"
+
+currentResolution :: Resolution
+currentResolution = normalResolution
 
 main :: IO ()
 main = do
@@ -38,12 +43,12 @@ main = do
             case args of
                 name : _ -> name
                 [] -> ""
-    let (camera, makeWorld) = matchScene sceneName mediumResolution
+    let (camera, makeWorld) = matchScene sceneName currentResolution
      in withFile "./output.ppm" WriteMode $ \handle -> do
             world <- makeWorld
-            hPutStr handle (ppmHeader mediumResolution)
+            hPutStr handle (ppmHeader currentResolution)
             computedImage
                 (rayPass camera world)
                 handle
-                mediumResolution
+                currentResolution
                 camera

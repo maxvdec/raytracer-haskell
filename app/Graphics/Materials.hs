@@ -7,7 +7,7 @@ import Data.Ord (clamp)
 import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Graphics.Texture (SomeTexture, Texture (sample))
+import Graphics.Texture (SomeTexture (SomeTexture), Texture (sample), makeSolidColor)
 import Math (Color, RandomGenerator, Vector3 (..), dot, nearZero, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
@@ -53,6 +53,12 @@ makeLambertian :: SomeTexture -> Lambertian
 makeLambertian tex =
     Lambertian
         { lambertianTexture = tex
+        }
+
+makeSolidLambertian :: Color -> Lambertian
+makeSolidLambertian col =
+    Lambertian
+        { lambertianTexture = SomeTexture (makeSolidColor col)
         }
 
 data Metal = Metal {metalAlbedo :: Color, fuzz :: Float}

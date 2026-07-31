@@ -74,6 +74,7 @@ executable raytracer
         Scenes.World
         Graphics.Noise
         Scenes.PerlinSpheres
+        Scenes.Quads
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
