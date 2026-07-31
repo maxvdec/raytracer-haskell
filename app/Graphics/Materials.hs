@@ -1,7 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Materials where
+module Graphics.Materials where
 
 import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (normal, p, isFront))

@@ -3,8 +3,8 @@ module Main (main) where
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene (Camera (Camera, maxDepth, resolution, samplesPerPixel, viewportResolution, fov, lookat, lookfrom, vup, defocusAngle, focusDist, defocusDiskU, defocusDiskV), World (World, hittables), fillViewportResolution, fillDiskInfo)
 import Geometry.Shapes
-import Image
-import Materials (SomeMaterial (SomeMaterial), makeLambertian, makeMetal, makeDielectric)
+import Graphics.Image
+import Graphics.Materials (SomeMaterial (SomeMaterial), makeLambertian, makeMetal, makeDielectric)
 import Math (Resolution, Vector3 (Vector3), (|>), RandomGenerator, makeRandomGenerator)
 import Renders (computedImage, rayPass)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)

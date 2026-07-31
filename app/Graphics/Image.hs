@@ -1,4 +1,4 @@
-module Image where
+module Graphics.Image where
 
 import Math
 

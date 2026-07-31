@@ -7,7 +7,7 @@ import Control.Applicative
 import GHC.Float (roundFloat)
 import Geometry.Hit (Hit (..), Hittable (hit, boundingBox), makeHit, setFaceNormal)
 import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
-import Materials (SomeMaterial)
+import Graphics.Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3 (Vector3), contains, dot, lengthSquared, (.*), (.-), (/.))
 import Geometry.AABB (AABB, aabbFromPoints, aabbFromAABBs)
 

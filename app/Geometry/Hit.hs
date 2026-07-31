@@ -5,7 +5,7 @@ module Geometry.Hit where
 
 import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t))
 import Geometry.Ray (Ray (direction))
-import Materials (SomeMaterial)
+import Graphics.Materials (SomeMaterial)
 import Math (Interval, Point3, Vector3, dot)
 import Geometry.AABB (AABB)
 
