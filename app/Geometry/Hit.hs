@@ -4,10 +4,10 @@
 module Geometry.Hit where
 
 import Geometry.AABB (AABB)
-import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t))
+import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t, uv))
 import Geometry.Ray (Ray (direction))
 import Graphics.Materials (SomeMaterial)
-import Math (Interval, Point3, Vector3, dot)
+import Math (Interval, Point3, TextureCoord, Vector3, dot)
 
 data Hit = Hit
     { info :: HitInfo
@@ -16,6 +16,9 @@ data Hit = Hit
 
 hitP :: Hit -> Point3
 hitP = p . info
+
+hitTexCoords :: Hit -> TextureCoord
+hitTexCoords = uv . info
 
 hitNormal :: Hit -> Vector3
 hitNormal = normal . info
@@ -26,10 +29,10 @@ hitT = t . info
 isHitFront :: Hit -> Bool
 isHitFront = isFront . info
 
-makeHit :: Point3 -> Vector3 -> Float -> Bool -> SomeMaterial -> Hit
-makeHit point normalVec tVal frontFace mat =
+makeHit :: Point3 -> Vector3 -> Float -> Bool -> SomeMaterial -> TextureCoord -> Hit
+makeHit point normalVec tVal frontFace mat coords =
     Hit
-        { info = HitInfo{p = point, normal = normalVec, t = tVal, isFront = frontFace}
+        { info = HitInfo{p = point, normal = normalVec, t = tVal, uv = coords, isFront = frontFace}
         , material = mat
         }
 
@@ -43,6 +46,7 @@ setFaceNormal h r outward =
             (hitT h)
             frontFace
             (material h)
+            (hitTexCoords h)
 
 class Hittable a where
     hit :: a -> Ray -> Interval -> Maybe Hit

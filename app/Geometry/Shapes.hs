@@ -5,14 +5,14 @@ module Geometry.Shapes where
 
 import Control.Applicative
 import GHC.Float (roundFloat)
-import Geometry.Hit (Hit (..), Hittable (hit, boundingBox), makeHit, setFaceNormal)
+import Geometry.AABB (AABB, aabbFromAABBs, aabbFromPoints)
+import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), makeHit, setFaceNormal)
 import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
 import Graphics.Materials (SomeMaterial)
-import Math (Interval, Point3, Vector3 (Vector3), contains, dot, lengthSquared, (.*), (.-), (/.))
-import Geometry.AABB (AABB, aabbFromPoints, aabbFromAABBs)
+import Math (Interval, Point3, TextureCoord, Vector3 (Vector3), contains, dot, getX, getY, getZ, lengthSquared, (.*), (.-), (/.))
 
 data Sphere = Sphere
-    { center :: Ray 
+    { center :: Ray
     , radius :: Float
     , sphereMaterial :: SomeMaterial
     }
@@ -20,18 +20,26 @@ data Sphere = Sphere
 makeSphere :: Point3 -> Float -> SomeMaterial -> Sphere
 makeSphere c r mat =
     Sphere
-        { center = makeRay c (Vector3 0 0 0) 
+        { center = makeRay c (Vector3 0 0 0)
         , radius = r
         , sphereMaterial = mat
         }
 
 makeAnimatedSphere :: Point3 -> Point3 -> Float -> SomeMaterial -> Sphere
 makeAnimatedSphere a b r mat =
-    Sphere {
-        center = makeRay a (b - a)
+    Sphere
+        { center = makeRay a (b - a)
         , radius = r
         , sphereMaterial = mat
-    }
+        }
+
+getSphereUV :: Point3 -> TextureCoord
+getSphereUV p =
+    let theta = acos (-(getY p))
+        phi = (atan2 (-(getZ p)) (getX p)) + pi
+        u = phi / (2 * pi)
+        v = theta / pi
+     in (u, v)
 
 instance Hittable Sphere where
     hit :: Sphere -> Ray -> Interval -> Maybe Hit
@@ -64,6 +72,7 @@ instance Hittable Sphere where
                 let hitPoint = at ray root
                     outwardNormal =
                         (hitPoint - currentCenter) /. radius sphere
+                    sphereUV = getSphereUV outwardNormal
 
                     initialHit =
                         makeHit
@@ -72,26 +81,26 @@ instance Hittable Sphere where
                             root
                             False
                             (sphereMaterial sphere)
+                            sphereUV
                  in Just (setFaceNormal initialHit ray outwardNormal)
 
     boundingBox :: Sphere -> AABB
-    boundingBox obj 
+    boundingBox obj
         | direction (center obj) == (Vector3 0 0 0) = makeStaticAABB
         | otherwise = makeAnimatedAABB
+      where
+        makeStaticAABB :: AABB
+        makeStaticAABB =
+            let staticCenter = origin (center obj)
+                rad = radius obj
+                rvec = (Vector3 rad rad rad)
+             in aabbFromPoints (staticCenter - rvec) (staticCenter + rvec)
 
-        where
-            makeStaticAABB :: AABB
-            makeStaticAABB =
-                let staticCenter = origin (center obj)
-                    rad = radius obj
-                    rvec = (Vector3 rad rad rad) in
-                    aabbFromPoints (staticCenter - rvec) (staticCenter + rvec)
-
-            makeAnimatedAABB :: AABB
-            makeAnimatedAABB =
-                let rad = radius obj
-                    rvec = (Vector3 rad rad rad) 
-                    cent = center obj
-                    box1 = aabbFromPoints ((at cent 0) - rvec) ((at cent 0) + rvec)
-                    box2 = aabbFromPoints ((at cent 1) - rvec) ((at cent 1) + rvec)
-                in aabbFromAABBs box1 box2
+        makeAnimatedAABB :: AABB
+        makeAnimatedAABB =
+            let rad = radius obj
+                rvec = (Vector3 rad rad rad)
+                cent = center obj
+                box1 = aabbFromPoints ((at cent 0) - rvec) ((at cent 0) + rvec)
+                box2 = aabbFromPoints ((at cent 1) - rvec) ((at cent 1) + rvec)
+             in aabbFromAABBs box1 box2
