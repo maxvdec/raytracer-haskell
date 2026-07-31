@@ -10,6 +10,7 @@ import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLamb
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeCheckerFromColors, makeSolidColor)
 import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
 import Renders (computedImage, rayPass)
+import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
@@ -26,6 +27,7 @@ mediumResolution = (800, 450)
 matchScene :: String -> Resolution -> (Camera, IO World)
 matchScene name res = case (map toLower name) of
     "world" -> worldScene res
+    "perlin" -> perlinSpheresScene res
     _ -> error "Scene does not exist"
 
 main :: IO ()

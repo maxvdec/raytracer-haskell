@@ -4,7 +4,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 
 import Control.Monad (forM_, replicateM)
-import Data.Bits ((.&.))
+import Data.Bits (Bits (xor), (.&.))
 import Math (Point3, RandomGenerator, getX, getY, getZ, randomFloat)
 import System.Random (randomRIO)
 
@@ -33,13 +33,14 @@ makePermutation size =
 
 noise :: Perlin -> Point3 -> Float
 noise perlin p =
-    let i = ((floor (4 * getX p)) :: Int) .&. 255
-        j = ((floor (4 * getY p)) :: Int) .&. 255
-        k = ((floor (4 * getZ p)) :: Int) .&. 255
+    let elems = length (noiseRandfloat perlin)
+        i = ((floor (4 * getX p)) :: Int) .&. (elems - 1)
+        j = ((floor (4 * getY p)) :: Int) .&. (elems - 1)
+        k = ((floor (4 * getZ p)) :: Int) .&. (elems - 1)
         noiseX = (permX perlin) V.! i
         noiseY = (permY perlin) V.! j
         noiseZ = (permZ perlin) V.! k
-     in (noiseRandfloat perlin) !! (noiseX ^ noiseY ^ noiseZ)
+     in (noiseRandfloat perlin) !! (noiseX `xor` noiseY `xor` noiseZ)
 
 makePerlinNoise :: RandomGenerator -> Int -> IO Perlin
 makePerlinNoise gen size = do

@@ -73,6 +73,7 @@ executable raytracer
         Geometry.BVH
         Scenes.World
         Graphics.Noise
+        Scenes.PerlinSpheres
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

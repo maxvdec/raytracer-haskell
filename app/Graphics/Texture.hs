@@ -5,7 +5,8 @@ module Graphics.Texture where
 
 import Codec.Picture (Image (imageHeight, imageWidth), Pixel (pixelAt), PixelRGB8 (PixelRGB8), convertRGB8, readImage)
 import Data.Ord (clamp)
-import Math (Color, TextureCoord, Vector3 (Vector3), getX, getY, getZ)
+import Graphics.Noise (Perlin, makePerlinNoise, noise)
+import Math (Color, RandomGenerator, TextureCoord, Vector3 (Vector3), getX, getY, getZ, makeRandomGenerator, (*.))
 
 class Texture a where
     sample :: a -> TextureCoord -> Vector3 -> Color
@@ -105,3 +106,22 @@ instance Texture ImageTexture where
                 (fromIntegral red * scale)
                 (fromIntegral green * scale)
                 (fromIntegral blue * scale)
+
+data NoiseTexture = NoiseTexture
+    { perlinNoise :: Perlin
+    }
+
+instance Texture NoiseTexture where
+    sample tex _ p =
+        let perlin = (perlinNoise tex)
+         in (Vector3 1 1 1) *. (noise perlin p)
+
+makeNoiseTexture :: IO NoiseTexture
+makeNoiseTexture = do
+    randGen <- makeRandomGenerator
+    perlin <- makePerlinNoise randGen 256
+    pure
+        ( NoiseTexture
+            { perlinNoise = perlin
+            }
+        )
