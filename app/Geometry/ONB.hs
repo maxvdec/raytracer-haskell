@@ -3,9 +3,9 @@ module Geometry.ONB where
 import Math (Vector3 (Vector3), cross, getX, getY, getZ, unit, (.*))
 
 data ONB = ONB
-    { onbU :: Vector3
-    , onbV :: Vector3
-    , onbW :: Vector3
+    { onbU :: !Vector3
+    , onbV :: !Vector3
+    , onbW :: !Vector3
     }
 
 makeONB :: Vector3 -> ONB

@@ -10,7 +10,7 @@ fillColorData :: NormalizedColor -> String
 fillColorData (r, g, b) = show r ++ " " ++ show g ++ " " ++ show b
 
 putColor :: Color -> String
-putColor color = fillColorData ((normalizeColor . linearToGamma) color) ++ "\n"
+putColor color = fillColorData ((normalizeColor . linearToGamma . checkNaNs) color) ++ "\n"
 
 putColorBuilder :: Color -> Builder
 putColorBuilder color =

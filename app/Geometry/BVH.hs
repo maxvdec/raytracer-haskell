@@ -11,7 +11,7 @@ import Math (Interval, Point3, RandomGenerator, Vector3, randomFloat, randomInt)
 
 data BVH
     = Leaf !AABB !SomeHittable
-    | Branch !AABB !BVH !BVH
+    | Branch !AABB !Int !BVH !BVH
 
 instance Hittable BVH where
     hit :: BVH -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
@@ -25,7 +25,7 @@ instance Hittable BVH where
 
         hitKnownNode :: BVH -> Interval -> IO (Maybe Hit)
         hitKnownNode (Leaf _ obj) interval = hit obj gen r interval
-        hitKnownNode (Branch _ node1 node2) interval = hitChildren node1 node2 interval
+        hitKnownNode (Branch _ _ node1 node2) interval = hitChildren node1 node2 interval
 
         hitChildren :: BVH -> BVH -> Interval -> IO (Maybe Hit)
         hitChildren node1 node2 interval =
@@ -50,7 +50,7 @@ instance Hittable BVH where
 
     boundingBox :: BVH -> AABB
     boundingBox (Leaf aabb _) = aabb
-    boundingBox (Branch aabb _ _) = aabb
+    boundingBox (Branch aabb _ _ _) = aabb
 
     pdfObjectValue ::
         BVH ->
@@ -60,7 +60,7 @@ instance Hittable BVH where
         IO Float
     pdfObjectValue (Leaf _ obj) gen org dir =
         pdfObjectValue obj gen org dir
-    pdfObjectValue (Branch _ left right) gen org dir = do
+    pdfObjectValue (Branch _ _ left right) gen org dir = do
         let leftCount = bvhObjectCount left
             rightCount = bvhObjectCount right
             totalCount = leftCount + rightCount
@@ -88,7 +88,7 @@ instance Hittable BVH where
         IO Vector3
     randomPdf (Leaf _ obj) gen org =
         randomPdf obj gen org
-    randomPdf (Branch _ left right) gen org = do
+    randomPdf (Branch _ _ left right) gen org = do
         let leftCount = bvhObjectCount left
             rightCount = bvhObjectCount right
             totalCount = leftCount + rightCount
@@ -108,6 +108,7 @@ createBVHTree [obj] = Leaf (boundingBox obj) obj
 createBVHTree [obj1, obj2] =
     Branch
         (aabbFromAABBs (boundingBox obj1) (boundingBox obj2))
+        2
         (Leaf (boundingBox obj1) obj1)
         (Leaf (boundingBox obj2) obj2)
 createBVHTree objects =
@@ -124,6 +125,7 @@ createBVHTree objects =
         rightBVH = createBVHTree rightObjects
      in Branch
             (aabbFromAABBs (boundingBox leftBVH) (boundingBox rightBVH))
+            (bvhObjectCount leftBVH + bvhObjectCount rightBVH)
             leftBVH
             rightBVH
   where
@@ -152,5 +154,4 @@ boxZCompare a b = compareBox a b 2
 
 bvhObjectCount :: BVH -> Int
 bvhObjectCount (Leaf _ _) = 1
-bvhObjectCount (Branch _ left right) =
-    bvhObjectCount left + bvhObjectCount right
+bvhObjectCount (Branch _ count _ _) = count

@@ -23,7 +23,7 @@ class Material a where
     scatteringPDF :: a -> Ray -> HitInfo -> Ray -> Float
     scatteringPDF _ _ _ _ = 0
 
-data SomeMaterial = forall a. (Material a) => SomeMaterial a
+data SomeMaterial = forall a. (Material a) => SomeMaterial !a
 
 instance Material SomeMaterial where
     scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe ScatterRecord)
@@ -37,7 +37,7 @@ instance Material Lambertian where
     scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe ScatterRecord)
     scatter mat _ _ hitted =
         let atten = sampleTexture
-            newPdf = CosinePDF (normal hitted)
+            newPdf = CosinePDF (makeONB (normal hitted))
          in pure (Just (makeScatterRecord atten (Left newPdf)))
       where
         sampleTexture :: Color

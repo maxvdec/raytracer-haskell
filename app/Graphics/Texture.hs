@@ -11,7 +11,7 @@ import Math (Color, RandomGenerator, TextureCoord, Vector3 (Vector3), getX, getY
 class Texture a where
     sample :: a -> TextureCoord -> Vector3 -> Color
 
-data SomeTexture = forall a. (Texture (a)) => SomeTexture a
+data SomeTexture = forall a. (Texture a) => SomeTexture !a
 
 instance Texture SomeTexture where
     sample :: SomeTexture -> TextureCoord -> Vector3 -> Color
@@ -32,9 +32,9 @@ makeSolidColor col =
         }
 
 data CheckerTexture = CheckerTexture
-    { invScale :: Float
-    , evenTexture :: SomeTexture
-    , oddTexture :: SomeTexture
+    { invScale :: !Float
+    , evenTexture :: !SomeTexture
+    , oddTexture :: !SomeTexture
     }
 
 instance Texture CheckerTexture where
@@ -108,8 +108,8 @@ instance Texture ImageTexture where
                 (fromIntegral blue * scale)
 
 data NoiseTexture = NoiseTexture
-    { perlinNoise :: Perlin
-    , noiseFrequency :: Float
+    { perlinNoise :: !Perlin
+    , noiseFrequency :: !Float
     }
 
 instance Texture NoiseTexture where

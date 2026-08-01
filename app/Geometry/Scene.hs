@@ -86,7 +86,7 @@ calculateTopLeftPos cam =
 
 getSPPProperties :: Camera -> (Integer, Float)
 getSPPProperties cam =
-    let sqrtSpp = round (sqrt (fromInteger (samplesPerPixel cam))) :: Integer
+    let sqrtSpp = ceiling (sqrt (fromInteger (samplesPerPixel cam))) :: Integer
      in (sqrtSpp, 1 / (fromInteger sqrtSpp))
 
 makeRayGenerator :: Camera -> RandomGenerator -> Integer -> Integer -> Integer -> Integer -> Float -> IO Ray

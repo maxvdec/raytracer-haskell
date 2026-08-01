@@ -7,9 +7,9 @@ import Geometry.Ray (Ray (direction, origin))
 import Math (Addable ((+.), (.+)), Interval, Point3, Vector3 (Vector3), enclose, expand, getX, getY, getZ, sizeOfInterval, (|>))
 
 data AABB = AABB
-    { axisX :: Interval
-    , axisY :: Interval
-    , axisZ :: Interval
+    { axisX :: !Interval
+    , axisY :: !Interval
+    , axisZ :: !Interval
     }
 
 aabbFromPoints :: Point3 -> Point3 -> AABB

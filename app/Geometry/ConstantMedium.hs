@@ -12,9 +12,9 @@ import Graphics.Texture (SomeTexture (SomeTexture))
 import Math (Color, Interval, RandomGenerator, Vector3 (Vector3), infinity, randomFloat, vecLength)
 
 data ConstantMedium = ConstantMedium
-    { mediumBoundary :: SomeHittable
-    , negInvDensity :: Float
-    , phaseFunction :: SomeMaterial
+    { mediumBoundary :: !SomeHittable
+    , negInvDensity :: !Float
+    , phaseFunction :: !SomeMaterial
     }
 
 instance Hittable ConstantMedium where

@@ -64,6 +64,13 @@ enclose a b =
         newMax = if snd a >= snd b then snd a else snd b
      in (newMin, newMax)
 
+checkNaNs :: Color -> Color
+checkNaNs col =
+    let x = if (getX col) /= (getX col) then 0 else (getX col)
+        y = if (getY col) /= (getY col) then 0 else (getY col)
+        z = if (getZ col) /= (getZ col) then 0 else (getZ col)
+     in Vector3 x y z
+
 normalizeColor :: Color -> NormalizedColor
 normalizeColor (Vector3 r g b) =
     ( floor (255.999 * clamp (0, 0.999) r)

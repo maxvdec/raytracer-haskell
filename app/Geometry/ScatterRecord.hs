@@ -5,8 +5,8 @@ import Graphics.PDF (PDF)
 import Math (Color)
 
 data ScatterRecord = ScatterRecord
-    { attenuation :: Color
-    , scatPrimitive :: Either PDF Ray
+    { attenuation :: !Color
+    , scatPrimitive :: !(Either PDF Ray)
     }
 
 makeScatterRecord :: Color -> Either PDF Ray -> ScatterRecord

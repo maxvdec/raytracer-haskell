@@ -10,8 +10,8 @@ import Graphics.Materials (SomeMaterial)
 import Math (Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), dot)
 
 data Hit = Hit
-    { info :: HitInfo
-    , material :: SomeMaterial
+    { info :: !HitInfo
+    , material :: !SomeMaterial
     }
 
 hitP :: Hit -> Point3
@@ -56,7 +56,7 @@ class Hittable a where
     randomPdf :: a -> RandomGenerator -> Vector3 -> IO Vector3
     randomPdf _ _ _ = pure (Vector3 1 0 0)
 
-data SomeHittable = forall a. (Hittable a) => SomeHittable a
+data SomeHittable = forall a. (Hittable a) => SomeHittable !a
 
 instance Hittable SomeHittable where
     hit :: SomeHittable -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)

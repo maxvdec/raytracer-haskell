@@ -15,7 +15,7 @@ import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), Ligh
 import Graphics.HittablePDF (makeHittablePDF)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
-import Graphics.PDF (PDF (CosinePDF, HittablePDF, MixturePDF), generate, getPDFValue)
+import Graphics.PDF (PDF (MixturePDF), generate, getPDFValue)
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), dot, getX, getY, getZ, infinity, lengthSquared, makeRandomGenerator, normalizeColor, randomInHemisphere, randomInRange, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
@@ -68,27 +68,23 @@ computedSamples ::
     IO Color
 computedSamples f generator res coord cam = do
     let (sqrtSamples, invSqrtSamples) = getSPPProperties cam
+        sampleCount = samplesPerPixel cam
+        accumulate !sampleIndex !total
+            | sampleIndex >= sampleCount = pure total
+            | otherwise = do
+                let (sampleY, sampleX) = sampleIndex `divMod` sqrtSamples
+                color <-
+                    f
+                        generator
+                        res
+                        coord
+                        sampleX
+                        sampleY
+                        invSqrtSamples
+                let !newTotal = total + color
+                accumulate (sampleIndex + 1) newTotal
 
-        strata =
-            [ (sampleX, sampleY)
-            | sampleY <- [0 .. sqrtSamples - 1]
-            , sampleX <- [0 .. sqrtSamples - 1]
-            ]
-
-    colors <-
-        mapM
-            ( \(sampleX, sampleY) ->
-                f
-                    generator
-                    res
-                    coord
-                    sampleX
-                    sampleY
-                    invSqrtSamples
-            )
-            strata
-
-    pure (sum colors)
+    accumulate 0 (Vector3 0 0 0)
 
 computedChunk ::
     ( RandomGenerator ->
@@ -170,7 +166,7 @@ computedImage f handle res@(w, h) cam = do
                         hFlush stdout
                     else pure ()
                 pure (completedPixels, max displayedPercentage percentage)
-        chunkSize = 32
+        chunkSize = 8
         batchSize = max 1 (fromIntegral capabilities)
         renderChunks firstPixel
             | firstPixel >= totalPixels = pure ()

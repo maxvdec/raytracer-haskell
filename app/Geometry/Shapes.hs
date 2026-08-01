@@ -18,9 +18,9 @@ import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vect
 import System.Random (RandomGen)
 
 data Sphere = Sphere
-    { center :: Ray
-    , radius :: Float
-    , sphereMaterial :: SomeMaterial
+    { center :: !Ray
+    , radius :: !Float
+    , sphereMaterial :: !SomeMaterial
     }
 
 makeSphere :: Point3 -> Float -> SomeMaterial -> Sphere
@@ -114,21 +114,24 @@ instance Hittable Sphere where
              in aabbFromAABBs box1 box2
 
     pdfObjectValue :: Sphere -> RandomGenerator -> Point3 -> Vector3 -> IO Float
-    pdfObjectValue obj gen org dir = do
-        let interval = (0.001, infinity) :: Interval
-            selfRay =
-                Ray
-                    { origin = org
-                    , direction = dir
-                    , time = 0
-                    }
-        selfResult <- hit obj gen selfRay interval
-        let distSquared = lengthSquared ((at (center obj) 0) - org)
+    pdfObjectValue obj _ org dir = do
+        let sphereCenter = at (center obj) 0
+            oc = sphereCenter - org
+            dirLengthSquared = lengthSquared dir
+            halfB = dot dir oc
+            c = lengthSquared oc - radius obj * radius obj
+            discriminant = halfB * halfB - dirLengthSquared * c
+            intersects
+                | discriminant < 0 = False
+                | otherwise =
+                    let root = sqrt discriminant
+                        first = (halfB - root) / dirLengthSquared
+                        second = (halfB + root) / dirLengthSquared
+                     in contains (0.001, infinity) first || contains (0.001, infinity) second
+            distSquared = lengthSquared (sphereCenter - org)
             cosThetaMax = sqrt (1 - (radius obj) * (radius obj) / distSquared)
             solidAngle = 2 * pi * (1 - cosThetaMax)
-        case selfResult of
-            Nothing -> pure 0
-            Just _ -> pure (1 / solidAngle)
+        pure (if intersects then 1 / solidAngle else 0)
 
     randomPdf :: Sphere -> RandomGenerator -> Point3 -> IO Vector3
     randomPdf obj gen org = do
@@ -150,17 +153,23 @@ instance Hittable Sphere where
             pure (Vector3 x y z)
 
 data Quad = Quad
-    { quadOrigin :: Point3
-    , quadU :: Vector3
-    , quadV :: Vector3
-    , quadMaterial :: SomeMaterial
+    { quadOrigin :: !Point3
+    , quadU :: !Vector3
+    , quadV :: !Vector3
+    , quadMaterial :: !SomeMaterial
+    , quadNormal :: !Vector3
+    , quadD :: !Float
+    , quadW :: !Vector3
+    , quadArea :: !Float
+    , quadBounds :: !AABB
     }
 
 instance Hittable Quad where
     hit :: Quad -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
     hit quad _ ray interval =
-        let denom = dot normal (direction ray)
-            t = (d - dot normal (origin ray)) / denom
+        let normal = quadNormal quad
+            denom = dot normal (direction ray)
+            t = (quadD quad - dot normal (origin ray)) / denom
             intersection = at ray t
 
             initialHit = makeHit intersection normal t False (quadMaterial quad) (0, 0)
@@ -173,25 +182,11 @@ instance Hittable Quad where
                 else
                     pure (isInterior intersection (setFaceNormal initialHit ray normal))
       where
-        normal :: Vector3
-        normal =
-            let n = cross (quadU quad) (quadV quad)
-             in unit n
-
-        d :: Float
-        d =
-            dot normal (quadOrigin quad)
-
-        w :: Vector3
-        w =
-            let n = cross (quadU quad) (quadV quad)
-             in n /. dot n n
-
         getAlphaBeta :: Vector3 -> (Float, Float)
         getAlphaBeta intersection =
             let planarHitPtVector = intersection - (quadOrigin quad)
-                alpha = dot w (cross planarHitPtVector (quadV quad))
-                beta = dot w (cross (quadU quad) planarHitPtVector)
+                alpha = dot (quadW quad) (cross planarHitPtVector (quadV quad))
+                beta = dot (quadW quad) (cross (quadU quad) planarHitPtVector)
              in (alpha, beta)
 
         isInterior :: Vector3 -> Hit -> Maybe Hit
@@ -213,32 +208,28 @@ instance Hittable Quad where
                             )
 
     boundingBox :: Quad -> AABB
-    boundingBox quad =
-        let diagonal1 = aabbFromPoints (quadOrigin quad) (quadOrigin quad + quadU quad + quadV quad)
-            diagonal2 = aabbFromPoints (quadOrigin quad + quadU quad) (quadOrigin quad + quadV quad)
-         in aabbFromAABBs diagonal1 diagonal2
+    boundingBox = quadBounds
 
     pdfObjectValue :: Quad -> RandomGenerator -> Point3 -> Vector3 -> IO Float
-    pdfObjectValue obj gen org dir = do
-        let interval = (0.001, infinity) :: Interval
-            pdfRay =
-                Ray
-                    { origin = org
-                    , direction = dir
-                    , time = 0
-                    }
-        hitSelf <- hit obj gen pdfRay interval
-        case hitSelf of
-            Nothing -> pure 0
-            Just h ->
-                let sqrtDist = hitT h * hitT h * lengthSquared dir
-                    cost = abs ((dot dir (hitNormal h)) / vecLength dir)
-                 in pure (sqrtDist / (cost * area))
-      where
-        area :: Float
-        area =
-            let n = cross (quadU obj) (quadV obj)
-             in vecLength n
+    pdfObjectValue obj _ org dir = do
+        let normal = quadNormal obj
+            denom = dot normal dir
+            t = (quadD obj - dot normal org) / denom
+            intersection = org + t .* dir
+            planar = intersection - quadOrigin obj
+            alpha = dot (quadW obj) (cross planar (quadV obj))
+            beta = dot (quadW obj) (cross (quadU obj) planar)
+            intersects =
+                abs denom >= 1e-8
+                    && contains (0.001, infinity) t
+                    && contains (0, 1) alpha
+                    && contains (0, 1) beta
+        if intersects
+            then
+                let squaredDistance = t * t * lengthSquared dir
+                    cosine = abs (denom / vecLength dir)
+                 in pure (squaredDistance / (cosine * quadArea obj))
+            else pure 0
 
     randomPdf :: Quad -> RandomGenerator -> Point3 -> IO Vector3
     randomPdf obj gen org = do
@@ -249,12 +240,21 @@ instance Hittable Quad where
 
 makeQuad :: Point3 -> Vector3 -> Vector3 -> SomeMaterial -> Quad
 makeQuad org u v mat =
-    Quad
-        { quadOrigin = org
-        , quadU = u
-        , quadV = v
-        , quadMaterial = mat
-        }
+    let n = cross u v
+        normal = unit n
+        diagonal1 = aabbFromPoints org (org + u + v)
+        diagonal2 = aabbFromPoints (org + u) (org + v)
+     in Quad
+            { quadOrigin = org
+            , quadU = u
+            , quadV = v
+            , quadMaterial = mat
+            , quadNormal = normal
+            , quadD = dot normal org
+            , quadW = n /. dot n n
+            , quadArea = vecLength n
+            , quadBounds = aabbFromAABBs diagonal1 diagonal2
+            }
 
 makeBox :: Point3 -> Point3 -> SomeMaterial -> SomeHittable
 makeBox a b mat =
@@ -286,8 +286,8 @@ makeBox a b mat =
 
 data Translation
     = Translation
-    { translatedObject :: SomeHittable
-    , translationOffset :: Vector3
+    { translatedObject :: !SomeHittable
+    , translationOffset :: !Vector3
     }
 
 instance Hittable Translation where
@@ -328,9 +328,9 @@ translateBy offset obj =
         )
 
 data RotateY = RotateY
-    { rotatedObject :: SomeHittable
-    , sinTheta :: Float
-    , cosTheta :: Float
+    { rotatedObject :: !SomeHittable
+    , sinTheta :: !Float
+    , cosTheta :: !Float
     }
 
 instance Hittable RotateY where
