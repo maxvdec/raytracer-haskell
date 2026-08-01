@@ -224,9 +224,8 @@ colorScattering generator cam h r world depth = do
     case scatterResult of
         Nothing ->
             pure colorFromEmission
-        Just (attenuation, scattered) -> do
+        Just (attenuation, scattered, pdfVal) -> do
             let scatPDF = scatteringPDF hitMaterial r hitInformation scattered
-            let pdfVal = 1 / (2 * pi)
             bouncedColor <-
                 rayColor generator cam scattered world (depth - 1)
 

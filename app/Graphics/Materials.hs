@@ -6,12 +6,13 @@ module Graphics.Materials where
 import Data.Ord (clamp)
 import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
+import Geometry.ONB (ONB (onbW), makeONB, transformVectorBasedOnONB)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Graphics.Texture (SomeTexture (SomeTexture), Texture (sample), makeSolidColor)
-import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomFloat, randomInHemisphere, randomUnitVector, reflect, refract, unit, (.*))
+import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomCosineDirection, randomFloat, randomInHemisphere, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
-    scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter _ _ _ _ = pure Nothing
 
     emit :: a -> TextureCoord -> Point3 -> Color
@@ -23,7 +24,7 @@ class Material a where
 data SomeMaterial = forall a. (Material a) => SomeMaterial a
 
 instance Material SomeMaterial where
-    scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter (SomeMaterial mat) = scatter mat
     emit (SomeMaterial mat) = emit mat
     scatteringPDF (SomeMaterial mat) = scatteringPDF mat
@@ -31,27 +32,20 @@ instance Material SomeMaterial where
 newtype Lambertian = Lambertian {lambertianTexture :: SomeTexture}
 
 instance Material Lambertian where
-    scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter mat generator r hitted = do
-        randomUnit <- randomInHemisphere generator (normal hitted)
-        let scatterDirection = normal hitted + randomUnit
-        if nearZero scatterDirection
-            then do
-                let scattered =
-                        Ray
-                            { origin = p hitted
-                            , direction = normal hitted
-                            , time = (time r)
-                            }
-                pure (Just (sampleTexture, scattered))
-            else do
-                let scattered =
-                        Ray
-                            { origin = p hitted
-                            , direction = scatterDirection
-                            , time = (time r)
-                            }
-                pure (Just (sampleTexture, scattered))
+        let uvw = makeONB (normal hitted)
+        randomDir <- randomCosineDirection generator
+        let transformedDir = transformVectorBasedOnONB uvw randomDir
+        let scattered =
+                r
+                    { origin = (p hitted)
+                    , direction = unit transformedDir
+                    }
+        let attenuation = sampleTexture
+        let pdf = (dot (onbW uvw) (direction scattered)) / pi
+
+        pure (Just (attenuation, scattered, pdf))
       where
         sampleTexture :: Color
         sampleTexture =
@@ -76,7 +70,7 @@ makeSolidLambertian col =
 data Metal = Metal {metalAlbedo :: Color, fuzz :: Float}
 
 instance Material Metal where
-    scatter :: Metal -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: Metal -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter mat generator ray hitted = do
         let reflected = reflect (direction ray) (normal hitted)
         randomFuzzUnitVector <- randomUnitVector generator
@@ -90,7 +84,7 @@ instance Material Metal where
         let check = (dot (direction scattered) (normal hitted)) > 0
         if check
             then
-                pure (Just (metalAlbedo mat, scattered))
+                pure (Just (metalAlbedo mat, scattered, 0))
             else
                 pure Nothing
 
@@ -111,7 +105,7 @@ reflectance mat cosine =
      in r0 + (1 - r0) * ((1 - cosine) ^ (5 :: Integer))
 
 instance Material Dielectric where
-    scatter :: Dielectric -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: Dielectric -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter mat rgen ray hitted = do
         randomSchlick <- randomFloat rgen
 
@@ -130,7 +124,7 @@ instance Material Dielectric where
                     , direction = scatterDirection
                     , time = (time ray)
                     }
-        pure (Just (attenuation, scattered))
+        pure (Just (attenuation, scattered, 0))
 
 makeDielectric :: Float -> Dielectric
 makeDielectric refr =
@@ -163,7 +157,7 @@ newtype Isotropic = Isotropic
     }
 
 instance Material Isotropic where
-    scatter :: Isotropic -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
+    scatter :: Isotropic -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter isotropic gen r info = do
         unitVec <- randomUnitVector gen
         let scattered =
@@ -172,7 +166,7 @@ instance Material Isotropic where
                     , direction = unitVec
                     }
             attenuation = sample (isotropicTexture isotropic) (uv info) (p info)
-        pure (Just (attenuation, scattered))
+        pure (Just (attenuation, scattered, 0))
 
 makeIsotropic :: SomeTexture -> Isotropic
 makeIsotropic tex =

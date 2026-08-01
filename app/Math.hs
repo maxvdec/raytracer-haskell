@@ -256,3 +256,15 @@ randomInUnitDisk gen = do
             pure p
         else
             randomInUnitDisk gen
+
+randomCosineDirection :: RandomGenerator -> IO Vector3
+randomCosineDirection gen = do
+    r1 <- randomFloat gen
+    r2 <- randomFloat gen
+
+    let phi = 2 * pi * r1
+        x = cos phi * sqrt r2
+        y = sin phi * sqrt r2
+        z = sqrt (1 - r2)
+
+    pure (Vector3 x y z)
