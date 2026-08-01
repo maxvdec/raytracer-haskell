@@ -15,8 +15,8 @@ class Material a where
     scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray, Float))
     scatter _ _ _ _ = pure Nothing
 
-    emit :: a -> TextureCoord -> Point3 -> Color
-    emit _ _ _ = (Vector3 0 0 0)
+    emit :: a -> TextureCoord -> HitInfo -> Point3 -> Color
+    emit _ _ _ _ = (Vector3 0 0 0)
 
     scatteringPDF :: a -> Ray -> HitInfo -> Ray -> Float
     scatteringPDF _ _ _ _ = 0
@@ -137,8 +137,8 @@ newtype Light = Light
     }
 
 instance Material Light where
-    emit light coords point =
-        sample (emissionTexture light) coords point
+    emit light coords h point =
+        if not (isFront h) then Vector3 0 0 0 else sample (emissionTexture light) coords point
 
 makeLight :: SomeTexture -> Light
 makeLight tex =

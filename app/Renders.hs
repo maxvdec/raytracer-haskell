@@ -13,7 +13,7 @@ import Geometry.Ray (Ray (Ray, direction, origin, time), at)
 import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, getSPPProperties, makeRayGenerator)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
-import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, makeRandomGenerator, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
+import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), dot, getX, getY, getZ, infinity, lengthSquared, makeRandomGenerator, normalizeColor, randomInHemisphere, randomInRange, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
 formatDuration :: Integer -> String
@@ -217,7 +217,7 @@ colorScattering :: RandomGenerator -> Camera -> Hit -> Ray -> World -> Integer -
 colorScattering generator cam h r world depth = do
     let hitMaterial = material h
         hitInformation = info h
-        colorFromEmission = emit hitMaterial (uv hitInformation) (p hitInformation)
+        colorFromEmission = emit hitMaterial (uv hitInformation) hitInformation (p hitInformation)
 
     scatterResult <- scatter hitMaterial generator r hitInformation
 
@@ -225,12 +225,39 @@ colorScattering generator cam h r world depth = do
         Nothing ->
             pure colorFromEmission
         Just (attenuation, scattered, pdfVal) -> do
-            let scatPDF = scatteringPDF hitMaterial r hitInformation scattered
-            bouncedColor <-
-                rayColor generator cam scattered world (depth - 1)
+            hardCodedSample <- hardCodedPDFSampling attenuation scattered pdfVal
+            case hardCodedSample of
+                Nothing -> pure colorFromEmission
+                Just (color) -> pure (color + colorFromEmission)
+  where
+    -- NOTE: REMOVE FROM FINAL VERSION
+    hardCodedPDFSampling :: Color -> Ray -> Float -> IO (Maybe Color)
+    hardCodedPDFSampling attenuation scattered _ = do
+        onLightX <- randomInRange generator (213, 343)
+        onLightZ <- randomInRange generator (227, 332)
+        let onLight = Vector3 onLightX 554 onLightZ
+            toLight = onLight - (hitP h)
+            distanceSquare = lengthSquared toLight
+            toLight' = unit toLight
 
-            let colorFromScatter = (attenuation * bouncedColor *. scatPDF) /. pdfVal
-            pure (colorFromEmission + colorFromScatter)
+            lightArea = (343 - 213) * (332 - 227)
+            lightCosine = abs (getY toLight')
+
+            pdfValue = distanceSquare / (lightCosine * lightArea)
+            scattered' =
+                scattered
+                    { origin = (hitP h)
+                    , direction = toLight'
+                    }
+
+            scatPdf = scatteringPDF (material h) r (info h) scattered'
+
+        if (dot toLight' (hitNormal h) < 0) || (lightCosine < 1e-8)
+            then
+                pure Nothing
+            else do
+                bouncedColor <- rayColor generator cam scattered' world (depth - 1)
+                pure (Just ((attenuation * bouncedColor *. scatPdf) /. pdfValue))
 
 rayColor ::
     RandomGenerator ->
