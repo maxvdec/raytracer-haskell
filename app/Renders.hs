@@ -5,12 +5,12 @@ module Renders where
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import Data.ByteString.Builder (Builder, hPutBuilder)
-import GHC.Conc (getNumCapabilities)
 import GHC.Clock (getMonotonicTimeNSec)
+import GHC.Conc (getNumCapabilities)
 import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP, hitT)
 import Geometry.HitInfo (HitInfo (p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at)
-import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, makeRayGenerator)
+import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, getSPPProperties, makeRayGenerator)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter))
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, makeRandomGenerator, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
@@ -50,41 +50,89 @@ uvRender res = uvRows res 0
 
 -- Computed image
 computedSamples ::
-    (RandomGenerator -> Resolution -> ImageCoord -> IO Color) ->
+    ( RandomGenerator ->
+      Resolution ->
+      ImageCoord ->
+      Integer ->
+      Integer ->
+      Float ->
+      IO Color
+    ) ->
     RandomGenerator ->
     Resolution ->
     ImageCoord ->
-    Integer ->
+    Camera ->
     IO Color
-computedSamples f generator res coord sampleCount = do
-    accumulate sampleCount (Vector3 0 0 0)
-  where
-    accumulate 0 total = pure total
-    accumulate remaining total = do
-        color <- f generator res coord
-        let !newTotal = total + color
-        accumulate (remaining - 1) newTotal
+computedSamples f generator res coord cam = do
+    let (sqrtSamples, invSqrtSamples) = getSPPProperties cam
+
+        strata =
+            [ (sampleX, sampleY)
+            | sampleY <- [0 .. sqrtSamples - 1]
+            , sampleX <- [0 .. sqrtSamples - 1]
+            ]
+
+    colors <-
+        mapM
+            ( \(sampleX, sampleY) ->
+                f
+                    generator
+                    res
+                    coord
+                    sampleX
+                    sampleY
+                    invSqrtSamples
+            )
+            strata
+
+    pure (sum colors)
 
 computedChunk ::
-    (RandomGenerator -> Resolution -> ImageCoord -> IO Color) ->
+    ( RandomGenerator ->
+      Resolution ->
+      ImageCoord ->
+      Integer ->
+      Integer ->
+      Float ->
+      IO Color
+    ) ->
     IO () ->
     Resolution ->
     Integer ->
     Integer ->
-    Integer ->
+    Camera ->
     IO Builder
-computedChunk f reportProgress res@(w, _) firstPixel lastPixel sampleCount = do
+computedChunk f reportProgress res@(w, _) firstPixel lastPixel cam = do
     generator <- makeRandomGenerator
-    let computePixel pixelIndex = do
+
+    let actualSampleCount = (samplesPerPixel cam)
+
+        computePixel pixelIndex = do
             let (y, x) = pixelIndex `divMod` w
-            total <- computedSamples f generator res (x, y) sampleCount
+
+            total <-
+                computedSamples
+                    f
+                    generator
+                    res
+                    (x, y)
+                    cam
+
             reportProgress
-            pure (putColorBuilder (total /. fromInteger sampleCount))
-    pixels <- mapM computePixel [firstPixel .. lastPixel]
+
+            pure $
+                putColorBuilder
+                    (total /. fromInteger actualSampleCount)
+
+    pixels <-
+        mapM
+            computePixel
+            [firstPixel .. lastPixel]
+
     pure (mconcat pixels)
 
 computedImage ::
-    (RandomGenerator -> Resolution -> ImageCoord -> IO Color) ->
+    (RandomGenerator -> Resolution -> ImageCoord -> Integer -> Integer -> Float -> IO Color) ->
     Handle ->
     Resolution ->
     Camera ->
@@ -135,7 +183,7 @@ computedImage f handle res@(w, h) cam = do
                             res
                             chunkStart
                             (min (totalPixels - 1) (chunkStart + chunkSize - 1))
-                            (samplesPerPixel cam)
+                            cam
                 chunks <-
                     mapConcurrently
                         renderChunk
@@ -207,9 +255,9 @@ rayColor generator camera r world depth = do
         Nothing ->
             pure (backgroundColor camera)
 
-rayPass :: Camera -> World -> RandomGenerator -> Resolution -> ImageCoord -> IO Color
+rayPass :: Camera -> World -> RandomGenerator -> Resolution -> ImageCoord -> Integer -> Integer -> Float -> IO Color
 rayPass cam world =
     let makeRay = makeRayGenerator cam
-     in \generator _ (x, y) -> do
-            ray <- makeRay generator x y
+     in \generator _ (x, y) si sj invSamplesPerPixel -> do
+            ray <- makeRay generator x y si sj invSamplesPerPixel
             rayColor generator cam ray world (maxDepth cam)

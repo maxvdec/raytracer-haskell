@@ -1,4 +1,5 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Geometry.Scene where
 
@@ -82,13 +83,18 @@ calculateTopLeftPos cam =
      in
         viewportUpperLeft + 0.5 .* (deltaU + deltaV)
 
-makeRayGenerator :: Camera -> RandomGenerator -> Integer -> Integer -> IO Ray
+getSPPProperties :: Camera -> (Integer, Float)
+getSPPProperties cam =
+    let sqrtSpp = round (sqrt (fromInteger (samplesPerPixel cam))) :: Integer
+     in (sqrtSpp, 1 / (fromInteger sqrtSpp))
+
+makeRayGenerator :: Camera -> RandomGenerator -> Integer -> Integer -> Integer -> Integer -> Float -> IO Ray
 makeRayGenerator cam =
     let (deltaU, deltaV) = calculateDeltaUV cam
         pixel0Pos = calculateTopLeftPos cam
         camCenter = lookfrom cam
-     in \generator x y -> do
-            offset <- sampleSquare generator
+     in \generator x y di dj invSamplesPerPix -> do
+            offset <- sampleSquareStratified generator di dj invSamplesPerPix
             rayOrigin <-
                 if defocusAngle cam <= 0
                     then pure camCenter
@@ -110,13 +116,23 @@ makeRayGenerator cam =
 
         pure (Vector3 xOffset yOffset 0)
 
+    sampleSquareStratified :: RandomGenerator -> Integer -> Integer -> Float -> IO Vector3
+    sampleSquareStratified gen si sj invSqrtSamples = do
+        randX <- randomFloat gen
+        randY <- randomFloat gen
+
+        let px = ((fromInteger si + randX) * invSqrtSamples) - 0.5
+            py = ((fromInteger sj + randY) * invSqrtSamples) - 0.5
+
+        pure (Vector3 px py 0)
+
     defocusDiskSample :: RandomGenerator -> IO Vector3
     defocusDiskSample rand = do
         p <- randomInUnitDisk rand
         let result = lookfrom cam + ((getX p) .* (defocusDiskU cam)) + ((getY p) .* (defocusDiskV cam))
         pure result
 
-makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ray
+makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> Integer -> Integer -> Float -> IO Ray
 makeRayForCoordinate generator cam = makeRayGenerator cam generator
 
 newtype World = World

@@ -43,7 +43,7 @@ matchScene name res = case (map toLower name) of
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
-currentResolution = normalResolution
+currentResolution = (600, 600)
 
 main :: IO ()
 main = do

@@ -13,7 +13,7 @@ cornellBoxCamera res =
     Camera
         { viewportResolution = (0, 0)
         , resolution = res
-        , samplesPerPixel = 100
+        , samplesPerPixel = 10
         , maxDepth = 50
         , fov = 40
         , lookfrom = (Vector3 278 278 (-800))
