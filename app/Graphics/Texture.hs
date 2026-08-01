@@ -5,8 +5,8 @@ module Graphics.Texture where
 
 import Codec.Picture (Image (imageHeight, imageWidth), Pixel (pixelAt), PixelRGB8 (PixelRGB8), convertRGB8, readImage)
 import Data.Ord (clamp)
-import Graphics.Noise (Perlin, makePerlinNoise, noise, turb)
-import Math (Color, RandomGenerator, TextureCoord, Vector3 (Vector3), getX, getY, getZ, makeRandomGenerator, (*.))
+import Graphics.Noise (Perlin, makePerlinNoise, turb)
+import Math (Color, TextureCoord, Vector3 (Vector3), getX, getY, getZ, makeRandomGenerator, (*.))
 
 class Texture a where
     sample :: a -> TextureCoord -> Vector3 -> Color

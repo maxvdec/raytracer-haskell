@@ -4,18 +4,14 @@
 module Geometry.Shapes where
 
 import Control.Applicative
-import Control.Exception.Base (NoMatchingContinuationPrompt)
-import Control.Monad (when)
-import GHC.Float (roundFloat)
 import Geometry.AABB (AABB (axisX, axisY, axisZ), aabbFromAABBs, aabbFromPoints)
-import Geometry.Hit (Hit (..), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable), hitNormal, hitP, hitT, makeHit, setFaceNormal)
+import Geometry.Hit (Hit (..), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable), hitNormal, hitP, makeHit, setFaceNormal)
 import Geometry.HitInfo (HitInfo (normal, p, uv))
 import Geometry.ONB (makeONB, transformVectorBasedOnONB)
-import Geometry.Ray (Ray (Ray, direction, origin, time), at, makeRay)
+import Geometry.Ray (Ray (direction, origin, time), at, makeRay)
 import Geometry.Scene (packHittables)
-import Graphics.Materials (SomeMaterial (SomeMaterial))
-import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, randomFloat, unit, vecLength, (.*), (.-), (/.))
-import System.Random (RandomGen)
+import Graphics.Materials (SomeMaterial)
+import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, randomFloat, unit, vecLength, (.*), (/.))
 
 data Sphere = Sphere
     { center :: !Ray
@@ -40,9 +36,9 @@ makeAnimatedSphere a b r mat =
         }
 
 getSphereUV :: Point3 -> TextureCoord
-getSphereUV p =
-    let theta = acos (-(getY p))
-        phi = (atan2 (-(getZ p)) (getX p)) + pi
+getSphereUV point =
+    let theta = acos (-(getY point))
+        phi = (atan2 (-(getZ point)) (getX point)) + pi
         u = phi / (2 * pi)
         v = theta / pi
      in (u, v)
@@ -167,12 +163,12 @@ data Quad = Quad
 instance Hittable Quad where
     hit :: Quad -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
     hit quad _ ray interval =
-        let normal = quadNormal quad
-            denom = dot normal (direction ray)
-            t = (quadD quad - dot normal (origin ray)) / denom
+        let norm = quadNormal quad
+            denom = dot norm (direction ray)
+            t = (quadD quad - dot norm (origin ray)) / denom
             intersection = at ray t
 
-            initialHit = makeHit intersection normal t False (quadMaterial quad) (0, 0)
+            initialHit = makeHit intersection norm t False (quadMaterial quad) (0, 0)
 
             isParallel = abs denom < 1e-8
             notContained = not (contains interval t)
@@ -180,7 +176,7 @@ instance Hittable Quad where
                 then
                     pure Nothing
                 else
-                    pure (isInterior intersection (setFaceNormal initialHit ray normal))
+                    pure (isInterior intersection (setFaceNormal initialHit ray norm))
       where
         getAlphaBeta :: Vector3 -> (Float, Float)
         getAlphaBeta intersection =
@@ -212,9 +208,9 @@ instance Hittable Quad where
 
     pdfObjectValue :: Quad -> RandomGenerator -> Point3 -> Vector3 -> IO Float
     pdfObjectValue obj _ org dir = do
-        let normal = quadNormal obj
-            denom = dot normal dir
-            t = (quadD obj - dot normal org) / denom
+        let norm = quadNormal obj
+            denom = dot norm dir
+            t = (quadD obj - dot norm org) / denom
             intersection = org + t .* dir
             planar = intersection - quadOrigin obj
             alpha = dot (quadW obj) (cross planar (quadV obj))
@@ -241,7 +237,7 @@ instance Hittable Quad where
 makeQuad :: Point3 -> Vector3 -> Vector3 -> SomeMaterial -> Quad
 makeQuad org u v mat =
     let n = cross u v
-        normal = unit n
+        norm = unit n
         diagonal1 = aabbFromPoints org (org + u + v)
         diagonal2 = aabbFromPoints (org + u) (org + v)
      in Quad
@@ -249,8 +245,8 @@ makeQuad org u v mat =
             , quadU = u
             , quadV = v
             , quadMaterial = mat
-            , quadNormal = normal
-            , quadD = dot normal org
+            , quadNormal = norm
+            , quadD = dot norm org
             , quadW = n /. dot n n
             , quadArea = vecLength n
             , quadBounds = aabbFromAABBs diagonal1 diagonal2

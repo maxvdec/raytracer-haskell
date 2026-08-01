@@ -7,7 +7,7 @@ import Geometry.AABB (AABB (AABB, axisX, axisY, axisZ), aabbFromAABBs)
 import Geometry.BVH (createBVHTree)
 import Geometry.Hit (Hit, Hittable (boundingBox, hit), SomeHittable (SomeHittable), hitT)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
-import Math (Color, Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInRange, randomInUnitDisk, randomUnitVector, unit, vecLength, (*.), (.*), (/.))
+import Math (Color, Interval, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInUnitDisk, unit, (*.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
 
@@ -110,13 +110,6 @@ makeRayGenerator cam =
                     }
                 )
   where
-    sampleSquare :: RandomGenerator -> IO Vector3
-    sampleSquare generator = do
-        xOffset <- randomInRange generator (-0.5, 0.5)
-        yOffset <- randomInRange generator (-0.5, 0.5)
-
-        pure (Vector3 xOffset yOffset 0)
-
     sampleSquareStratified :: RandomGenerator -> Integer -> Integer -> Float -> IO Vector3
     sampleSquareStratified gen si sj invSqrtSamples = do
         randX <- randomFloat gen
@@ -185,8 +178,8 @@ instance Hittable World where
             , axisZ = (infinity, -infinity)
             }
     boundingBox (World [obj]) = boundingBox obj
-    boundingBox (World (obj : objects)) =
-        let newWorld = World{hittables = objects}
+    boundingBox (World (obj : objs)) =
+        let newWorld = World{hittables = objs}
          in aabbFromAABBs (boundingBox obj) (boundingBox newWorld)
 
 newtype HittableList = HittableList
@@ -195,8 +188,8 @@ newtype HittableList = HittableList
 
 instance Hittable HittableList where
     hit :: HittableList -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
-    hit (HittableList objects) gen ray interval =
-        go objects Nothing (snd interval)
+    hit (HittableList objs) gen ray interval =
+        go objs Nothing (snd interval)
       where
         go [] closestHit _ =
             pure closestHit

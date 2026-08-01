@@ -3,9 +3,9 @@ module Graphics.Noise where
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 
-import Control.Monad (forM_, replicateM)
+import Control.Monad (forM_)
 import Data.Bits (Bits (xor), (.&.))
-import Math (Point3, RandomGenerator, Vector3 (Vector3), dot, getX, getY, getZ, randomFloat, randomVectorInRange, (*.), (.*))
+import Math (Point3, RandomGenerator, Vector3 (Vector3), dot, getX, getY, getZ, randomVectorInRange, (*.))
 import System.Random (randomRIO)
 
 data Perlin = Perlin

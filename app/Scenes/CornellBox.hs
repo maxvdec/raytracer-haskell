@@ -4,9 +4,8 @@ import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
 import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
-import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeDielectric, makeLambertian, makeLightFromColor, makeMetal, makeSolidLambertian)
-import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
-import Math (Resolution, Vector3 (Vector3), (|>), (||>))
+import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLightFromColor, makeSolidLambertian)
+import Math (Resolution, Vector3 (Vector3), (|>))
 
 cornellBoxCamera :: Resolution -> Camera
 cornellBoxCamera res =

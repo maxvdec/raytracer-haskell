@@ -8,7 +8,6 @@ import Geometry.Hit (Hit (info), Hittable (boundingBox, hit), SomeHittable, hitT
 import Geometry.HitInfo (HitInfo (t))
 import Geometry.Ray (Ray (direction), at)
 import Graphics.Materials (SomeMaterial (SomeMaterial), makeSolidIsotropic)
-import Graphics.Texture (SomeTexture (SomeTexture))
 import Math (Color, Interval, RandomGenerator, Vector3 (Vector3), infinity, randomFloat, vecLength)
 
 data ConstantMedium = ConstantMedium

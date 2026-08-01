@@ -4,10 +4,9 @@ import Geometry.BVH (createBVHTree)
 import Geometry.ConstantMedium (makeMedium)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
-import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
-import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor, makeSolidLambertian)
-import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
-import Math (Resolution, Vector3 (Vector3), (|>), (||>))
+import Geometry.Shapes (makeBox, makeQuad, rotateBy, translateBy)
+import Graphics.Materials (SomeMaterial (SomeMaterial), makeLightFromColor, makeSolidLambertian)
+import Math (Resolution, Vector3 (Vector3), (|>))
 
 cornellBoxSmokeCamera :: Resolution -> Camera
 cornellBoxSmokeCamera res =

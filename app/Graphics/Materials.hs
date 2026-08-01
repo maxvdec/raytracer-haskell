@@ -4,14 +4,13 @@
 module Graphics.Materials where
 
 import Data.Ord (clamp)
-import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
-import Geometry.ONB (ONB (onbW), makeONB, transformVectorBasedOnONB)
+import Geometry.ONB (makeONB)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Geometry.ScatterRecord (ScatterRecord, makeScatterRecord)
 import Graphics.PDF (PDF (CosinePDF, SpherePDF))
 import Graphics.Texture (SomeTexture (SomeTexture), Texture (sample), makeSolidColor)
-import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomCosineDirection, randomFloat, randomInHemisphere, randomUnitVector, reflect, refract, unit, (.*))
+import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
     scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe ScatterRecord)

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Renders where
 
@@ -7,17 +8,17 @@ import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import Data.ByteString.Builder (Builder, hPutBuilder)
 import GHC.Clock (getMonotonicTimeNSec)
 import GHC.Conc (getNumCapabilities)
-import Geometry.Hit (Hit (info, material), Hittable (hit, pdfObjectValue), hitNormal, hitP, hitT)
+import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP)
 import Geometry.HitInfo (HitInfo (p, uv))
-import Geometry.Ray (Ray (Ray, direction, origin, time), at)
-import Geometry.ScatterRecord (ScatterRecord (ScatterRecord, attenuation, scatPrimitive))
+import Geometry.Ray (Ray (Ray, direction, origin, time))
+import Geometry.ScatterRecord (ScatterRecord (attenuation, scatPrimitive))
 import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), Lights (mainHittable), World, getSPPProperties, makeRayGenerator)
 import Graphics.HittablePDF (makeHittablePDF)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
 import Graphics.PDF (PDF (MixturePDF), generate, getPDFValue)
-import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), dot, getX, getY, getZ, infinity, lengthSquared, makeRandomGenerator, normalizeColor, randomInHemisphere, randomInRange, ratio, unit, (*.), (.*), (/.))
-import System.IO (Handle, hFlush, hPutStr, stdout)
+import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), infinity, makeRandomGenerator, randomInHemisphere, ratio, (*.), (.*), (/.))
+import System.IO (Handle, hFlush, stdout)
 
 formatDuration :: Integer -> String
 formatDuration totalSeconds

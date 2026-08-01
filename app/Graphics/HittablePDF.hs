@@ -2,10 +2,9 @@ module Graphics.HittablePDF where
 
 import Control.Monad (foldM)
 import GHC.Num.Integer (integerFromInt)
-import Geometry.Hit (Hit, Hittable (pdfObjectValue, randomPdf), SomeHittable)
-import Geometry.Ray (Ray)
+import Geometry.Hit (Hittable (pdfObjectValue, randomPdf), SomeHittable)
 import Graphics.PDF (PDF (HittablePDF))
-import Math (Interval, Point3, RandomGenerator, Vector3, randomInt)
+import Math (Point3, RandomGenerator, Vector3, randomInt)
 
 makeHittablePDF :: SomeHittable -> Point3 -> PDF
 makeHittablePDF object origin =

@@ -3,11 +3,11 @@
 module Geometry.BVH where
 
 import Data.List (sortBy)
-import Geometry.AABB (AABB (AABB), aabbFromAABBs, getAxisFromAABB, getLongestAxisFromAABB, hitAABB)
-import Geometry.Hit (Hit (info), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable))
+import Geometry.AABB (AABB, aabbFromAABBs, getAxisFromAABB, getLongestAxisFromAABB, hitAABB)
+import Geometry.Hit (Hit (info), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable)
 import Geometry.HitInfo (HitInfo (t))
 import Geometry.Ray (Ray)
-import Math (Interval, Point3, RandomGenerator, Vector3, randomFloat, randomInt)
+import Math (Interval, Point3, RandomGenerator, Vector3, randomFloat)
 
 data BVH
     = Leaf !AABB !SomeHittable

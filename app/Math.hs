@@ -51,12 +51,12 @@ expand interval delta =
      in (iMin - padding, iMax + padding)
 
 sizeOfInterval :: Interval -> Float
-sizeOfInterval (min, max) =
-    max - min
+sizeOfInterval (mi, ma) =
+    ma - mi
 
 surrounds :: Interval -> Float -> Bool
-surrounds (min, max) val =
-    min < val && max > val
+surrounds (mi, ma) val =
+    mi < val && ma > val
 
 enclose :: Interval -> Interval -> Interval
 enclose a b =

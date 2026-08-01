@@ -1,15 +1,9 @@
 module Main (main) where
 
 import Data.Char (toLower)
-import Geometry.BVH (createBVHTree)
-import Geometry.Hit (SomeHittable (SomeHittable))
-import Geometry.HitInfo (HitInfo (normal))
-import Geometry.Scene (Camera (Camera, defocusAngle, defocusDiskU, defocusDiskV, focusDist, fov, lookat, lookfrom, maxDepth, resolution, samplesPerPixel, viewportResolution, vup), Lights, Scene, World (World, hittables), fillDiskInfo, fillViewportResolution)
-import Geometry.Shapes
+import Geometry.Scene (Camera (samplesPerPixel), Lights, World)
 import Graphics.Image
-import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLambertian, makeMetal)
-import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeCheckerFromColors, makeSolidColor)
-import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator, (|>))
+import Math (Resolution)
 import Renders (computedImage, rayPass)
 import Scenes.CornellBox (cornellBoxScene)
 import Scenes.CornellBoxSmoke (cornellBoxSmokeScene)
@@ -21,12 +15,6 @@ import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
 import Text.Read (readMaybe)
-
-normalResolution :: Resolution
-normalResolution = (1280, 720)
-
-devResolution :: Resolution
-devResolution = (400, 225)
 
 mediumResolution :: Resolution
 mediumResolution = (800, 450)
@@ -43,7 +31,7 @@ matchScene name res = case (map toLower name) of
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
-currentResolution = (600, 600)
+currentResolution = mediumResolution
 
 main :: IO ()
 main = do

@@ -5,7 +5,7 @@ import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
 import Geometry.Shapes (makeQuad, makeSphere)
 import Graphics.Materials (SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor)
-import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
+import Graphics.Texture (SomeTexture (SomeTexture), makeNoiseTexture)
 import Math (Resolution, Vector3 (Vector3), (|>))
 
 simpleLightCamera :: Resolution -> Camera
