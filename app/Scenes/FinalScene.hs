@@ -53,7 +53,7 @@ finalSceneCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-finalSceneWorld :: IO World
+finalSceneWorld :: IO (World, Lights)
 finalSceneWorld = do
     earthTexture <- loadImageTexture "./textures/earthmap.jpg"
     noiseTexture <- makeNoiseTexture 0.2
@@ -183,7 +183,6 @@ finalSceneWorld = do
 
         scene =
             [ SomeHittable groundBVH
-            , SomeHittable light
             , SomeHittable movingSphere
             , SomeHittable glassSphere
             , SomeHittable metalSphere
@@ -192,6 +191,7 @@ finalSceneWorld = do
             , SomeHittable atmosphere
             , SomeHittable earthSphere
             , SomeHittable perlinSphere
+            , SomeHittable light
             , sphereCluster
             ]
 
@@ -199,9 +199,11 @@ finalSceneWorld = do
             createBVHTree scene
 
     pure
-        World
+        ( World
             { hittables = [SomeHittable root]
             }
+        , makeLightsForSingle (SomeHittable light)
+        )
 
 makeGroundBox ::
     SomeMaterial ->

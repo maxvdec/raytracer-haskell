@@ -28,7 +28,7 @@ simpleLightCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-simpleLightWorld :: IO World
+simpleLightWorld :: IO (World, Lights)
 simpleLightWorld = do
     noiseTexture <- makeNoiseTexture 4
     let surface = makeLambertian (SomeTexture noiseTexture)
@@ -37,10 +37,10 @@ simpleLightWorld = do
         sphere = makeSphere (Vector3 0 2 0) 2 (SomeMaterial surface)
         light = makeQuad (Vector3 3 1 (-2)) (Vector3 2 0 0) (Vector3 0 2 0) (SomeMaterial diffuse)
         sphereLight = makeSphere (Vector3 0 7 0) 2 (SomeMaterial diffuse)
-        scene = [SomeHittable ground, SomeHittable sphere, SomeHittable light, SomeHittable sphereLight]
+        scene = [SomeHittable ground, SomeHittable sphere, SomeHittable sphereLight, SomeHittable light]
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLightsForSingle (SomeHittable light))
 
 simpleLightScene :: Scene
 simpleLightScene res = (simpleLightCamera res, simpleLightWorld)

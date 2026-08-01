@@ -1,5 +1,5 @@
-run scene:
-    cabal run raytracer -- {{ scene }} +RTS -N10 -A64m
+run scene width="" height="" samples="":
+    cabal run raytracer -- {{ scene }} {{ width }} {{ height }} {{ samples }} +RTS -N10 -A64m
 
-runHalf scene:
-    cabal run raytracer -- {{ scene }} +RTS -N6 -A32m
+runHalf scene width="" height="" samples="":
+    cabal run raytracer -- {{ scene }} {{ width }} {{ height }} {{ samples }} +RTS -N6 -A32m

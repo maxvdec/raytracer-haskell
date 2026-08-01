@@ -8,12 +8,12 @@ import Control.Exception.Base (NoMatchingContinuationPrompt)
 import Control.Monad (when)
 import GHC.Float (roundFloat)
 import Geometry.AABB (AABB (axisX, axisY, axisZ), aabbFromAABBs, aabbFromPoints)
-import Geometry.Hit (Hit (..), Hittable (boundingBox, hit), SomeHittable (SomeHittable), hitNormal, hitP, makeHit, setFaceNormal)
+import Geometry.Hit (Hit (..), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable), hitNormal, hitP, hitT, makeHit, setFaceNormal)
 import Geometry.HitInfo (HitInfo (normal, p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at, makeRay)
 import Geometry.Scene (packHittables)
 import Graphics.Materials (SomeMaterial (SomeMaterial))
-import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, unit, (.*), (.-), (/.))
+import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, randomFloat, unit, vecLength, (.*), (.-), (/.))
 
 data Sphere = Sphere
     { center :: Ray
@@ -179,6 +179,35 @@ instance Hittable Quad where
         let diagonal1 = aabbFromPoints (quadOrigin quad) (quadOrigin quad + quadU quad + quadV quad)
             diagonal2 = aabbFromPoints (quadOrigin quad + quadU quad) (quadOrigin quad + quadV quad)
          in aabbFromAABBs diagonal1 diagonal2
+
+    pdfObjectValue :: Quad -> RandomGenerator -> Point3 -> Vector3 -> IO Float
+    pdfObjectValue obj gen org dir = do
+        let interval = (0.001, infinity) :: Interval
+            pdfRay =
+                Ray
+                    { origin = org
+                    , direction = dir
+                    , time = 0
+                    }
+        hitSelf <- hit obj gen pdfRay interval
+        case hitSelf of
+            Nothing -> pure 0
+            Just h ->
+                let sqrtDist = hitT h * hitT h * lengthSquared dir
+                    cost = abs ((dot dir (hitNormal h)) / vecLength dir)
+                 in pure (sqrtDist / (cost * area))
+      where
+        area :: Float
+        area =
+            let n = cross (quadU obj) (quadV obj)
+             in vecLength n
+
+    randomPdf :: Quad -> RandomGenerator -> Point3 -> IO Vector3
+    randomPdf obj gen org = do
+        randomU <- randomFloat gen
+        randomV <- randomFloat gen
+        let randP = (quadOrigin obj) + (randomU .* (quadU obj)) + (randomV .* (quadV obj))
+        pure (randP - org)
 
 makeQuad :: Point3 -> Vector3 -> Vector3 -> SomeMaterial -> Quad
 makeQuad org u v mat =

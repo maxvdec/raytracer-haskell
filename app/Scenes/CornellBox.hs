@@ -13,7 +13,7 @@ cornellBoxCamera res =
     Camera
         { viewportResolution = (0, 0)
         , resolution = res
-        , samplesPerPixel = 30
+        , samplesPerPixel = 10
         , maxDepth = 50
         , fov = 40
         , lookfrom = (Vector3 278 278 (-800))
@@ -28,7 +28,7 @@ cornellBoxCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-cornellBoxWorld :: IO World
+cornellBoxWorld :: IO (World, Lights)
 cornellBoxWorld = do
     let red = makeSolidLambertian (Vector3 0.65 0.05 0.05)
         white = makeSolidLambertian (Vector3 0.73 0.73 0.73)
@@ -48,17 +48,17 @@ cornellBoxWorld = do
         scene =
             [ SomeHittable left
             , SomeHittable right
-            , SomeHittable lightPrim
             , SomeHittable wall
             , SomeHittable wall'
             , SomeHittable wall''
+            , SomeHittable lightPrim
             , (box1 |> rotateBy 15 |> translateBy (Vector3 265 0 295))
             , (box2 |> rotateBy (-18) |> translateBy (Vector3 130 0 65))
             ]
 
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLightsForSingle (SomeHittable lightPrim))
 
 cornellBoxScene :: Scene
 cornellBoxScene res = (cornellBoxCamera res, cornellBoxWorld)

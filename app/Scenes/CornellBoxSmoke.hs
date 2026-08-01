@@ -29,7 +29,7 @@ cornellBoxSmokeCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-cornellBoxSmokeWorld :: IO World
+cornellBoxSmokeWorld :: IO (World, Lights)
 cornellBoxSmokeWorld = do
     let red = makeSolidLambertian (Vector3 0.65 0.05 0.05)
         white = makeSolidLambertian (Vector3 0.73 0.73 0.73)
@@ -57,17 +57,17 @@ cornellBoxSmokeWorld = do
         scene =
             [ SomeHittable left
             , SomeHittable right
-            , SomeHittable lightPrim
             , SomeHittable wall
             , SomeHittable wall'
             , SomeHittable wall''
+            , SomeHittable lightPrim
             , box1
             , SomeHittable medium
             ]
 
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLightsForSingle (SomeHittable lightPrim))
 
 cornellBoxSmokeScene :: Scene
 cornellBoxSmokeScene res = (cornellBoxSmokeCamera res, cornellBoxSmokeWorld)

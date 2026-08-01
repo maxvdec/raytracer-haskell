@@ -10,10 +10,10 @@ import GHC.Conc (getNumCapabilities)
 import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP, hitT)
 import Geometry.HitInfo (HitInfo (p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at)
-import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, getSPPProperties, makeRayGenerator)
+import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), Lights (mainHittable), World, getSPPProperties, makeRayGenerator)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
-import Graphics.PDF (PDF (CosinePDF), generate, getPDFValue)
+import Graphics.PDF (PDF (CosinePDF, HittablePDF, MixturePDF), generate, getPDFValue)
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), dot, getX, getY, getZ, infinity, lengthSquared, makeRandomGenerator, normalizeColor, randomInHemisphere, randomInRange, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
@@ -202,8 +202,8 @@ colorNormal :: Hit -> Color
 colorNormal h =
     0.5 .* (hitNormal h + Vector3 1 1 1)
 
-colorGradient :: RandomGenerator -> Camera -> Hit -> World -> Integer -> IO Color
-colorGradient generator cam h world depth = do
+colorGradient :: RandomGenerator -> Camera -> Hit -> World -> Lights -> Integer -> IO Color
+colorGradient generator cam h world lights depth = do
     dir <- randomInHemisphere generator (hitNormal h)
     let ray =
             Ray
@@ -211,11 +211,11 @@ colorGradient generator cam h world depth = do
                 , direction = dir + hitNormal h
                 , time = 0
                 }
-    bounces <- rayColor generator cam ray world (depth - 1)
+    bounces <- rayColor generator cam ray world lights (depth - 1)
     pure (0.5 .* bounces)
 
-colorScattering :: RandomGenerator -> Camera -> Hit -> Ray -> World -> Integer -> IO Color
-colorScattering generator cam h r world depth = do
+colorScattering :: RandomGenerator -> Camera -> Hit -> Ray -> World -> Lights -> Integer -> IO Color
+colorScattering generator cam h r world lights depth = do
     let hitMaterial = material h
         hitInformation = info h
         colorFromEmission = emit hitMaterial (uv hitInformation) hitInformation (p hitInformation)
@@ -231,17 +231,19 @@ colorScattering generator cam h r world depth = do
   where
     pdfSampling :: Color -> Ray -> Float -> IO Color
     pdfSampling attenuation scattered _ = do
-        let surfacePDF = CosinePDF (hitNormal h)
-        dir <- generate surfacePDF generator
+        let surfacePDF = HittablePDF (mainHittable lights) (hitP h)
+        let normalPDF = CosinePDF (hitNormal h)
+        let mixedPDF = MixturePDF surfacePDF normalPDF
+        dir <- generate mixedPDF generator
         let scattered' =
                 scattered
                     { origin = (hitP h)
                     , direction = dir
                     }
-            pdfValue = getPDFValue surfacePDF dir
             scatPDF = scatteringPDF (material h) r (info h) scattered'
+        pdfValue <- getPDFValue mixedPDF generator dir
 
-        bouncedColor <- rayColor generator cam scattered' world (depth - 1)
+        bouncedColor <- rayColor generator cam scattered' world lights (depth - 1)
         pure ((attenuation * bouncedColor *. scatPDF) /. pdfValue)
 
 rayColor ::
@@ -249,12 +251,13 @@ rayColor ::
     Camera ->
     Ray ->
     World ->
+    Lights ->
     Integer ->
     IO Color
-rayColor _ _ _ _ depth
+rayColor _ _ _ _ _ depth
     | depth <= 0 =
         pure (Vector3 0 0 0)
-rayColor generator camera r world depth = do
+rayColor generator camera r world lights depth = do
     res <- hit world generator r (0.001, infinity)
     case res of
         Just hitted ->
@@ -264,13 +267,14 @@ rayColor generator camera r world depth = do
                 hitted
                 r
                 world
+                lights
                 depth
         Nothing ->
             pure (backgroundColor camera)
 
-rayPass :: Camera -> World -> RandomGenerator -> Resolution -> ImageCoord -> Integer -> Integer -> Float -> IO Color
-rayPass cam world =
+rayPass :: Camera -> World -> Lights -> RandomGenerator -> Resolution -> ImageCoord -> Integer -> Integer -> Float -> IO Color
+rayPass cam world lights =
     let makeRay = makeRayGenerator cam
      in \generator _ (x, y) si sj invSamplesPerPixel -> do
             ray <- makeRay generator x y si sj invSamplesPerPixel
-            rayColor generator cam ray world (maxDepth cam)
+            rayColor generator cam ray world lights (maxDepth cam)

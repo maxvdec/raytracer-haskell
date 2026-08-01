@@ -28,7 +28,7 @@ perlinSpheresCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-perlinSpheresWorld :: IO World
+perlinSpheresWorld :: IO (World, Lights)
 perlinSpheresWorld = do
     noiseTexture <- makeNoiseTexture 4
     let surface = makeLambertian (SomeTexture noiseTexture)
@@ -37,7 +37,7 @@ perlinSpheresWorld = do
         scene = [SomeHittable ground, SomeHittable sphere]
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLights [])
 
 perlinSpheresScene :: Scene
 perlinSpheresScene res = (perlinSpheresCamera res, perlinSpheresWorld)

@@ -4,7 +4,7 @@ import Data.Char (toLower)
 import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.HitInfo (HitInfo (normal))
-import Geometry.Scene (Camera (Camera, defocusAngle, defocusDiskU, defocusDiskV, focusDist, fov, lookat, lookfrom, maxDepth, resolution, samplesPerPixel, viewportResolution, vup), Scene, World (World, hittables), fillDiskInfo, fillViewportResolution)
+import Geometry.Scene (Camera (Camera, defocusAngle, defocusDiskU, defocusDiskV, focusDist, fov, lookat, lookfrom, maxDepth, resolution, samplesPerPixel, viewportResolution, vup), Lights, Scene, World (World, hittables), fillDiskInfo, fillViewportResolution)
 import Geometry.Shapes
 import Graphics.Image
 import Graphics.Materials (SomeMaterial (SomeMaterial), makeDielectric, makeLambertian, makeMetal)
@@ -31,7 +31,7 @@ devResolution = (400, 225)
 mediumResolution :: Resolution
 mediumResolution = (800, 450)
 
-matchScene :: String -> Resolution -> (Camera, IO World)
+matchScene :: String -> Resolution -> (Camera, IO (World, Lights))
 matchScene name res = case (map toLower name) of
     "world" -> worldScene res
     "perlin" -> perlinSpheresScene res
@@ -65,10 +65,10 @@ main = do
                 Just sampleCount -> baseCamera{samplesPerPixel = sampleCount}
                 Nothing -> baseCamera
      in withFile "./output.ppm" WriteMode $ \handle -> do
-            world <- makeWorld
+            (world, lights) <- makeWorld
             hPutStr handle (ppmHeader selectedResolution)
             computedImage
-                (rayPass camera world)
+                (rayPass camera world lights)
                 handle
                 selectedResolution
                 camera

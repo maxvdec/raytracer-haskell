@@ -4,13 +4,14 @@
 module Geometry.Scene where
 
 import Geometry.AABB (AABB (AABB, axisX, axisY, axisZ), aabbFromAABBs)
+import Geometry.BVH (createBVHTree)
 import Geometry.Hit (Hit, Hittable (boundingBox, hit), SomeHittable (SomeHittable), hitT)
 import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Math (Color, Interval, Point3, RandomGenerator, Resolution, Vector3 (Vector3), cross, degreesToRadians, getX, getY, infinity, randomFloat, randomInRange, randomInUnitDisk, randomUnitVector, unit, vecLength, (*.), (.*), (/.))
 
 type ViewportResolution = (Float, Float)
 
-type Scene = Resolution -> (Camera, IO World)
+type Scene = Resolution -> (Camera, IO (World, Lights))
 
 data Camera = Camera
     { viewportResolution :: ViewportResolution
@@ -138,6 +139,21 @@ makeRayForCoordinate generator cam = makeRayGenerator cam generator
 newtype World = World
     { hittables :: [SomeHittable]
     }
+
+newtype Lights = Lights
+    {mainHittable :: SomeHittable}
+
+makeLights :: [SomeHittable] -> Lights
+makeLights objs =
+    Lights
+        { mainHittable = SomeHittable (createBVHTree objs)
+        }
+
+makeLightsForSingle :: SomeHittable -> Lights
+makeLightsForSingle obj =
+    Lights
+        { mainHittable = obj
+        }
 
 addObject :: World -> SomeHittable -> World
 addObject w obj =

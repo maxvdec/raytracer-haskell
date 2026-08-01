@@ -28,7 +28,7 @@ quadsSceneCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-quadsSceneWorld :: IO World
+quadsSceneWorld :: IO (World, Lights)
 quadsSceneWorld = do
     let leftRed = makeSolidLambertian (Vector3 1 0.2 0.2)
         backGreen = makeSolidLambertian (Vector3 0.2 1 0.2)
@@ -44,7 +44,7 @@ quadsSceneWorld = do
         scene = [SomeHittable leftQuad, SomeHittable backQuad, SomeHittable rightQuad, SomeHittable upperQuad, SomeHittable lowerQuad]
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLights [])
 
 quadsScene :: Scene
 quadsScene res = (quadsSceneCamera res, quadsSceneWorld)

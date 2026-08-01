@@ -28,7 +28,7 @@ worldSceneCamera res =
         |> fillViewportResolution
         |> fillDiskInfo
 
-worldSceneWorld :: IO World
+worldSceneWorld :: IO (World, Lights)
 worldSceneWorld = do
     worldTexture <- loadImageTexture "./textures/earthmap.jpg"
     let surface = makeLambertian (SomeTexture worldTexture)
@@ -36,7 +36,7 @@ worldSceneWorld = do
         scene = [SomeHittable globe]
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]})
+    pure (World{hittables = [SomeHittable root]}, makeLights [])
 
 worldScene :: Scene
 worldScene res = (worldSceneCamera res, worldSceneWorld)

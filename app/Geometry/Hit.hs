@@ -7,7 +7,7 @@ import Geometry.AABB (AABB)
 import Geometry.HitInfo (HitInfo (HitInfo, isFront, normal, p, t, uv))
 import Geometry.Ray (Ray (direction))
 import Graphics.Materials (SomeMaterial)
-import Math (Interval, Point3, RandomGenerator, TextureCoord, Vector3, dot)
+import Math (Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), dot)
 
 data Hit = Hit
     { info :: HitInfo
@@ -51,6 +51,10 @@ setFaceNormal h r outward =
 class Hittable a where
     hit :: a -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
     boundingBox :: a -> AABB
+    pdfObjectValue :: a -> RandomGenerator -> Point3 -> Vector3 -> IO Float
+    pdfObjectValue _ _ _ _ = pure 0
+    randomPdf :: a -> RandomGenerator -> Vector3 -> IO Vector3
+    randomPdf _ _ _ = pure (Vector3 1 0 0)
 
 data SomeHittable = forall a. (Hittable a) => SomeHittable a
 
@@ -60,3 +64,6 @@ instance Hittable SomeHittable where
 
     boundingBox :: SomeHittable -> AABB
     boundingBox (SomeHittable obj) = boundingBox obj
+
+    pdfObjectValue (SomeHittable obj) = pdfObjectValue obj
+    randomPdf (SomeHittable obj) = randomPdf obj
