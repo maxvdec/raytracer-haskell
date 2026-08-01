@@ -17,12 +17,16 @@ class Material a where
     emit :: a -> TextureCoord -> Point3 -> Color
     emit _ _ _ = (Vector3 0 0 0)
 
+    scatteringPDF :: a -> RandomGenerator -> Ray -> HitInfo -> Ray -> IO Float
+    scatteringPDF _ _ _ _ _ = pure 0
+
 data SomeMaterial = forall a. (Material a) => SomeMaterial a
 
 instance Material SomeMaterial where
     scatter :: SomeMaterial -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter (SomeMaterial mat) = scatter mat
     emit (SomeMaterial mat) = emit mat
+    scatteringPDF (SomeMaterial mat) = scatteringPDF mat
 
 newtype Lambertian = Lambertian {lambertianTexture :: SomeTexture}
 
@@ -53,6 +57,12 @@ instance Material Lambertian where
         sampleTexture =
             let tex = (lambertianTexture mat)
              in sample tex (uv hitted) (p hitted)
+
+    scatteringPDF :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> Ray -> IO Float
+    scatteringPDF _ _ _ hitted scattered = do
+        let n = normal hitted
+            cosTheta = dot n (unit (direction scattered))
+        pure (if cosTheta < 0 then 0 else cosTheta / pi)
 
 makeLambertian :: SomeTexture -> Lambertian
 makeLambertian tex =

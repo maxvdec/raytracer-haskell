@@ -12,7 +12,7 @@ import Geometry.HitInfo (HitInfo (p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at)
 import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, getSPPProperties, makeRayGenerator)
 import Graphics.Image (putColor, putColorBuilder)
-import Graphics.Materials (Material (emit, scatter))
+import Graphics.Materials (Material (emit, scatter, scatteringPDF))
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), getX, getY, getZ, infinity, makeRandomGenerator, normalizeColor, randomInHemisphere, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
@@ -225,10 +225,12 @@ colorScattering generator cam h r world depth = do
         Nothing ->
             pure colorFromEmission
         Just (attenuation, scattered) -> do
+            scatPDF <- scatteringPDF hitMaterial generator r hitInformation scattered
+            let pdfVal = 1 / (2 * pi)
             bouncedColor <-
                 rayColor generator cam scattered world (depth - 1)
 
-            let colorFromScatter = attenuation * bouncedColor
+            let colorFromScatter = (attenuation * bouncedColor *. scatPDF) /. pdfVal
             pure (colorFromEmission + colorFromScatter)
 
 rayColor ::
