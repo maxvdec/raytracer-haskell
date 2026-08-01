@@ -21,6 +21,14 @@ makeONB n =
             , onbW = w
             }
 
+emptyONB :: ONB
+emptyONB =
+    ONB
+        { onbU = 0
+        , onbV = 0
+        , onbW = 0
+        }
+
 transformVectorBasedOnONB :: ONB -> Vector3 -> Vector3
 transformVectorBasedOnONB onb v =
     let x = (getX v) .* (onbU onb)

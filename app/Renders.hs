@@ -13,6 +13,7 @@ import Geometry.Ray (Ray (Ray, direction, origin, time), at)
 import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), World, getSPPProperties, makeRayGenerator)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
+import Graphics.PDF (PDF (CosinePDF), generate, getPDFValue)
 import Math (Color, ImageCoord, RandomGenerator, Resolution, Vector3 (Vector3), dot, getX, getY, getZ, infinity, lengthSquared, makeRandomGenerator, normalizeColor, randomInHemisphere, randomInRange, ratio, unit, (*.), (.*), (/.))
 import System.IO (Handle, hFlush, hPutStr, stdout)
 
@@ -225,39 +226,23 @@ colorScattering generator cam h r world depth = do
         Nothing ->
             pure colorFromEmission
         Just (attenuation, scattered, pdfVal) -> do
-            hardCodedSample <- hardCodedPDFSampling attenuation scattered pdfVal
-            case hardCodedSample of
-                Nothing -> pure colorFromEmission
-                Just (color) -> pure (color + colorFromEmission)
+            colorFromScatter <- pdfSampling attenuation scattered pdfVal
+            pure (colorFromScatter + colorFromEmission)
   where
-    -- NOTE: REMOVE FROM FINAL VERSION
-    hardCodedPDFSampling :: Color -> Ray -> Float -> IO (Maybe Color)
-    hardCodedPDFSampling attenuation scattered _ = do
-        onLightX <- randomInRange generator (213, 343)
-        onLightZ <- randomInRange generator (227, 332)
-        let onLight = Vector3 onLightX 554 onLightZ
-            toLight = onLight - (hitP h)
-            distanceSquare = lengthSquared toLight
-            toLight' = unit toLight
-
-            lightArea = (343 - 213) * (332 - 227)
-            lightCosine = abs (getY toLight')
-
-            pdfValue = distanceSquare / (lightCosine * lightArea)
-            scattered' =
+    pdfSampling :: Color -> Ray -> Float -> IO Color
+    pdfSampling attenuation scattered _ = do
+        let surfacePDF = CosinePDF (hitNormal h)
+        dir <- generate surfacePDF generator
+        let scattered' =
                 scattered
                     { origin = (hitP h)
-                    , direction = toLight'
+                    , direction = dir
                     }
+            pdfValue = getPDFValue surfacePDF dir
+            scatPDF = scatteringPDF (material h) r (info h) scattered'
 
-            scatPdf = scatteringPDF (material h) r (info h) scattered'
-
-        if (dot toLight' (hitNormal h) < 0) || (lightCosine < 1e-8)
-            then
-                pure Nothing
-            else do
-                bouncedColor <- rayColor generator cam scattered' world (depth - 1)
-                pure (Just ((attenuation * bouncedColor *. scatPdf) /. pdfValue))
+        bouncedColor <- rayColor generator cam scattered' world (depth - 1)
+        pure ((attenuation * bouncedColor *. scatPDF) /. pdfValue)
 
 rayColor ::
     RandomGenerator ->
