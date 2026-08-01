@@ -8,7 +8,7 @@ import GHC.Generics (Meta)
 import Geometry.HitInfo (HitInfo (isFront, normal, p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time))
 import Graphics.Texture (SomeTexture (SomeTexture), Texture (sample), makeSolidColor)
-import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomFloat, randomUnitVector, reflect, refract, unit, (.*))
+import Math (Color, Point3, RandomGenerator, TextureCoord, Vector3 (..), dot, nearZero, randomFloat, randomInHemisphere, randomUnitVector, reflect, refract, unit, (.*))
 
 class Material a where
     scatter :: a -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
@@ -17,8 +17,8 @@ class Material a where
     emit :: a -> TextureCoord -> Point3 -> Color
     emit _ _ _ = (Vector3 0 0 0)
 
-    scatteringPDF :: a -> RandomGenerator -> Ray -> HitInfo -> Ray -> IO Float
-    scatteringPDF _ _ _ _ _ = pure 0
+    scatteringPDF :: a -> Ray -> HitInfo -> Ray -> Float
+    scatteringPDF _ _ _ _ = 0
 
 data SomeMaterial = forall a. (Material a) => SomeMaterial a
 
@@ -33,7 +33,7 @@ newtype Lambertian = Lambertian {lambertianTexture :: SomeTexture}
 instance Material Lambertian where
     scatter :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> IO (Maybe (Color, Ray))
     scatter mat generator r hitted = do
-        randomUnit <- randomUnitVector generator
+        randomUnit <- randomInHemisphere generator (normal hitted)
         let scatterDirection = normal hitted + randomUnit
         if nearZero scatterDirection
             then do
@@ -58,11 +58,8 @@ instance Material Lambertian where
             let tex = (lambertianTexture mat)
              in sample tex (uv hitted) (p hitted)
 
-    scatteringPDF :: Lambertian -> RandomGenerator -> Ray -> HitInfo -> Ray -> IO Float
-    scatteringPDF _ _ _ hitted scattered = do
-        let n = normal hitted
-            cosTheta = dot n (unit (direction scattered))
-        pure (if cosTheta < 0 then 0 else cosTheta / pi)
+    scatteringPDF :: Lambertian -> Ray -> HitInfo -> Ray -> Float
+    scatteringPDF _ _ _ _ = 1 / (2 * pi)
 
 makeLambertian :: SomeTexture -> Lambertian
 makeLambertian tex =
