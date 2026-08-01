@@ -4,7 +4,7 @@ import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
 import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
-import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor, makeSolidLambertian)
+import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor, makeMetal, makeSolidLambertian)
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
 import Math (Resolution, Vector3 (Vector3), (|>), (||>))
 
@@ -13,7 +13,7 @@ cornellBoxCamera res =
     Camera
         { viewportResolution = (0, 0)
         , resolution = res
-        , samplesPerPixel = 10
+        , samplesPerPixel = 40
         , maxDepth = 50
         , fov = 40
         , lookfrom = (Vector3 278 278 (-800))
@@ -35,6 +35,8 @@ cornellBoxWorld = do
         green = makeSolidLambertian (Vector3 0.12 0.45 0.15)
         light = makeLightFromColor (Vector3 15 15 15)
 
+        aluminum = makeMetal (Vector3 0.8 0.85 0.88) 0.0
+
         left = makeQuad (Vector3 555 0 0) (Vector3 0 555 0) (Vector3 0 0 555) (SomeMaterial green)
         right = makeQuad (Vector3 0 0 0) (Vector3 0 555 0) (Vector3 0 0 555) (SomeMaterial red)
         lightPrim = makeQuad (Vector3 343 554 332) (Vector3 (-130) 0 0) (Vector3 0 0 (-105)) (SomeMaterial light)
@@ -42,7 +44,7 @@ cornellBoxWorld = do
         wall' = makeQuad (Vector3 555 555 555) (Vector3 (-555) 0 0) (Vector3 0 0 (-555)) (SomeMaterial white)
         wall'' = makeQuad (Vector3 0 0 555) (Vector3 555 0 0) (Vector3 0 555 0) (SomeMaterial white)
 
-        box1 = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial white)
+        box1 = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial aluminum)
         box2 = makeBox (Vector3 0 0 0) (Vector3 165 165 165) (SomeMaterial white)
 
         scene =

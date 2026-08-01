@@ -82,6 +82,8 @@ executable raytracer
         Scenes.FinalScene
         Geometry.ONB
         Graphics.PDF
+        Graphics.HittablePDF
+        Geometry.ScatterRecord
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

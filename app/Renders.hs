@@ -7,10 +7,12 @@ import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import Data.ByteString.Builder (Builder, hPutBuilder)
 import GHC.Clock (getMonotonicTimeNSec)
 import GHC.Conc (getNumCapabilities)
-import Geometry.Hit (Hit (info, material), Hittable (hit), hitNormal, hitP, hitT)
+import Geometry.Hit (Hit (info, material), Hittable (hit, pdfObjectValue), hitNormal, hitP, hitT)
 import Geometry.HitInfo (HitInfo (p, uv))
 import Geometry.Ray (Ray (Ray, direction, origin, time), at)
+import Geometry.ScatterRecord (ScatterRecord (ScatterRecord, attenuation, scatPrimitive))
 import Geometry.Scene (Camera (backgroundColor, maxDepth, samplesPerPixel), Lights (mainHittable), World, getSPPProperties, makeRayGenerator)
+import Graphics.HittablePDF (makeHittablePDF)
 import Graphics.Image (putColor, putColorBuilder)
 import Graphics.Materials (Material (emit, scatter, scatteringPDF))
 import Graphics.PDF (PDF (CosinePDF, HittablePDF, MixturePDF), generate, getPDFValue)
@@ -225,26 +227,33 @@ colorScattering generator cam h r world lights depth = do
     case scatterResult of
         Nothing ->
             pure colorFromEmission
-        Just (attenuation, scattered, pdfVal) -> do
-            colorFromScatter <- pdfSampling attenuation scattered pdfVal
+        Just srec -> do
+            colorFromScatter <- handleScattering srec
             pure (colorFromScatter + colorFromEmission)
   where
-    pdfSampling :: Color -> Ray -> Float -> IO Color
-    pdfSampling attenuation scattered _ = do
-        let surfacePDF = HittablePDF (mainHittable lights) (hitP h)
-        let normalPDF = CosinePDF (hitNormal h)
-        let mixedPDF = MixturePDF surfacePDF normalPDF
-        dir <- generate mixedPDF generator
-        let scattered' =
-                scattered
-                    { origin = (hitP h)
-                    , direction = dir
-                    }
-            scatPDF = scatteringPDF (material h) r (info h) scattered'
-        pdfValue <- getPDFValue mixedPDF generator dir
+    handleScattering :: ScatterRecord -> IO Color
+    handleScattering rec =
+        case (scatPrimitive rec) of
+            Left pdf -> performPDFScattering rec pdf
+            Right ray -> do
+                bounced <- rayColor generator cam ray world lights (depth - 1)
+                pure (bounced * (attenuation rec))
 
-        bouncedColor <- rayColor generator cam scattered' world lights (depth - 1)
-        pure ((attenuation * bouncedColor *. scatPDF) /. pdfValue)
+    performPDFScattering :: ScatterRecord -> PDF -> IO Color
+    performPDFScattering srec pdf = do
+        let lightPDF = makeHittablePDF (mainHittable lights) (hitP h)
+            mixPDF = MixturePDF lightPDF pdf
+        pdfGen <- generate mixPDF generator
+        let scattered =
+                r
+                    { origin = (hitP h)
+                    , direction = pdfGen
+                    }
+
+        pdfVal <- getPDFValue mixPDF generator (direction scattered)
+        let scatPdf = scatteringPDF (material h) r (info h) scattered
+        bounceColor <- rayColor generator cam scattered world lights (depth - 1)
+        pure (((attenuation srec) *. scatPdf * bounceColor) /. pdfVal)
 
 rayColor ::
     RandomGenerator ->

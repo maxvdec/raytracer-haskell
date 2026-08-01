@@ -1,10 +1,9 @@
 module Graphics.PDF where
 
-import Geometry.Hit (Hittable (pdfObjectValue, randomPdf), SomeHittable)
 import Geometry.ONB (ONB (onbW), emptyONB, makeONB, transformVectorBasedOnONB)
-import Math (Point3, RandomGenerator, Vector3, dot, randomCosineDirection, randomFloat, randomUnitVector, unit)
+import Math (RandomGenerator, Vector3, dot, randomCosineDirection, randomFloat, randomUnitVector, unit)
 
-data PDF = SpherePDF | CosinePDF Vector3 | HittablePDF SomeHittable Point3 | MixturePDF PDF PDF
+data PDF = SpherePDF | CosinePDF Vector3 | HittablePDF (RandomGenerator -> Vector3 -> IO Float) (RandomGenerator -> IO Vector3) | MixturePDF PDF PDF
 
 onbFromPdf :: PDF -> ONB
 onbFromPdf (SpherePDF) = emptyONB
@@ -18,8 +17,7 @@ getPDFValue cpdf@(CosinePDF _) _ dir =
     let onb = onbFromPdf cpdf
         cost = dot (unit dir) (onbW onb)
      in pure (max 0 (cost / pi))
-getPDFValue (HittablePDF obj org) gen dir =
-    pdfObjectValue obj gen org dir
+getPDFValue (HittablePDF value _) gen dir = value gen dir
 getPDFValue (MixturePDF p0 p1) gen dir = do
     value0 <- getPDFValue p0 gen dir
     value1 <- getPDFValue p1 gen dir
@@ -31,8 +29,7 @@ generate cpdf@(CosinePDF _) gen = do
     let onb = onbFromPdf cpdf
     randDir <- randomCosineDirection gen
     pure (transformVectorBasedOnONB onb randDir)
-generate (HittablePDF obj org) gen = do
-    randomPdf obj gen org
+generate (HittablePDF _ generateDirection) gen = generateDirection gen
 generate (MixturePDF p0 p1) gen = do
     value0 <- generate p0 gen
     value1 <- generate p1 gen
