@@ -166,7 +166,10 @@ instance Material Isotropic where
                     , direction = unitVec
                     }
             attenuation = sample (isotropicTexture isotropic) (uv info) (p info)
-        pure (Just (attenuation, scattered, 0))
+        pure (Just (attenuation, scattered, 1 / (4 * pi)))
+
+    scatteringPDF :: Isotropic -> Ray -> HitInfo -> Ray -> Float
+    scatteringPDF _ _ _ _ = 1 / (4 * pi)
 
 makeIsotropic :: SomeTexture -> Isotropic
 makeIsotropic tex =
