@@ -5,12 +5,22 @@ import Geometry.Scene (Camera (samplesPerPixel), Lights, World)
 import Graphics.Image
 import Math (Resolution)
 import Renders (computedImage, rayPass)
+import Scenes.BioluminescentAbyss (bioluminescentAbyssScene)
+import Scenes.CelestialGarden (celestialGardenScene)
+import Scenes.Chronosphere (chronosphereScene)
 import Scenes.CornellBox (cornellBoxScene)
 import Scenes.CornellBoxSmoke (cornellBoxSmokeScene)
+import Scenes.CrystalCathedral (crystalCathedralScene)
+import Scenes.DesertMonoliths (desertMonolithsScene)
 import Scenes.FinalScene (finalScene)
+import Scenes.FrozenCitadel (frozenCitadelScene)
+import Scenes.MirrorTemple (mirrorTempleScene)
+import Scenes.NeonMetropolis (neonMetropolisScene)
+import Scenes.OrbitalObservatory (orbitalObservatoryScene)
 import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.Quads (quadsScene)
 import Scenes.SimpleLight (simpleLightScene)
+import Scenes.VolcanicForge (volcanicForgeScene)
 import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
@@ -28,6 +38,16 @@ matchScene name res = case (map toLower name) of
     "cornell" -> cornellBoxScene res
     "smoke" -> cornellBoxSmokeScene res
     "final" -> finalScene res
+    "crystal_cathedral" -> crystalCathedralScene res
+    "neon_metropolis" -> neonMetropolisScene res
+    "orbital_observatory" -> orbitalObservatoryScene res
+    "frozen_citadel" -> frozenCitadelScene res
+    "volcanic_forge" -> volcanicForgeScene res
+    "bioluminescent_abyss" -> bioluminescentAbyssScene res
+    "desert_monoliths" -> desertMonolithsScene res
+    "mirror_temple" -> mirrorTempleScene res
+    "celestial_garden" -> celestialGardenScene res
+    "chronosphere" -> chronosphereScene res
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
@@ -37,22 +57,22 @@ main :: IO ()
 main = do
     args <- getArgs
 
-    let (sceneName, selectedResolution, selectedSamples) =
+    let (sceneName, selectedResolution, selectedSamples, out) =
             case args of
-                name : widthText : heightText : sampleText : _ ->
+                name : widthText : heightText : sampleText : output : _ ->
                     case (readMaybe widthText, readMaybe heightText, readMaybe sampleText) of
                         (Just width, Just height, Just sampleCount)
                             | width > 0 && height > 0 && sampleCount > 0 ->
-                                (name, (width, height), Just sampleCount)
+                                (name, (width, height), Just sampleCount, output)
                         _ -> error "Width, height, and samples must be positive integers"
-                name : _ -> (name, currentResolution, Nothing)
-                [] -> ("", currentResolution, Nothing)
+                name : _ -> (name, currentResolution, Nothing, "output.ppm")
+                [] -> ("", currentResolution, Nothing, "output.ppm")
         (baseCamera, makeWorld) = matchScene sceneName selectedResolution
         camera =
             case selectedSamples of
                 Just sampleCount -> baseCamera{samplesPerPixel = sampleCount}
                 Nothing -> baseCamera
-     in withFile "./output.ppm" WriteMode $ \handle -> do
+     in withFile out WriteMode $ \handle -> do
             (world, lights) <- makeWorld
             hPutStr handle (ppmHeader selectedResolution)
             computedImage

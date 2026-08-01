@@ -80,6 +80,17 @@ executable raytracer
         Scenes.CornellBoxSmoke
         Geometry.ConstantMedium
         Scenes.FinalScene
+        Scenes.Showcase
+        Scenes.CrystalCathedral
+        Scenes.NeonMetropolis
+        Scenes.OrbitalObservatory
+        Scenes.FrozenCitadel
+        Scenes.VolcanicForge
+        Scenes.BioluminescentAbyss
+        Scenes.DesertMonoliths
+        Scenes.MirrorTemple
+        Scenes.CelestialGarden
+        Scenes.Chronosphere
         Geometry.ONB
         Graphics.PDF
         Graphics.HittablePDF
