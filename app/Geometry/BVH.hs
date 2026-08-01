@@ -4,10 +4,10 @@ module Geometry.BVH where
 
 import Data.List (sortBy)
 import Geometry.AABB (AABB (AABB), aabbFromAABBs, getAxisFromAABB, getLongestAxisFromAABB, hitAABB)
-import Geometry.Hit (Hit (info), Hittable (boundingBox, hit), SomeHittable (SomeHittable))
+import Geometry.Hit (Hit (info), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable))
 import Geometry.HitInfo (HitInfo (t))
 import Geometry.Ray (Ray)
-import Math (Interval, RandomGenerator, randomInt)
+import Math (Interval, Point3, RandomGenerator, Vector3, randomFloat, randomInt)
 
 data BVH
     = Leaf !AABB !SomeHittable
@@ -51,6 +51,56 @@ instance Hittable BVH where
     boundingBox :: BVH -> AABB
     boundingBox (Leaf aabb _) = aabb
     boundingBox (Branch aabb _ _) = aabb
+
+    pdfObjectValue ::
+        BVH ->
+        RandomGenerator ->
+        Point3 ->
+        Vector3 ->
+        IO Float
+    pdfObjectValue (Leaf _ obj) gen org dir =
+        pdfObjectValue obj gen org dir
+    pdfObjectValue (Branch _ left right) gen org dir = do
+        let leftCount = bvhObjectCount left
+            rightCount = bvhObjectCount right
+            totalCount = leftCount + rightCount
+
+            leftWeight =
+                fromIntegral leftCount / fromIntegral totalCount
+
+            rightWeight =
+                fromIntegral rightCount / fromIntegral totalCount
+
+        leftPdf <-
+            pdfObjectValue left gen org dir
+
+        rightPdf <-
+            pdfObjectValue right gen org dir
+
+        pure $
+            leftWeight * leftPdf
+                + rightWeight * rightPdf
+
+    randomPdf ::
+        BVH ->
+        RandomGenerator ->
+        Point3 ->
+        IO Vector3
+    randomPdf (Leaf _ obj) gen org =
+        randomPdf obj gen org
+    randomPdf (Branch _ left right) gen org = do
+        let leftCount = bvhObjectCount left
+            rightCount = bvhObjectCount right
+            totalCount = leftCount + rightCount
+
+            leftProbability =
+                fromIntegral leftCount / fromIntegral totalCount
+
+        choice <- randomFloat gen
+
+        if choice < leftProbability
+            then randomPdf left gen org
+            else randomPdf right gen org
 
 createBVHTree :: [SomeHittable] -> BVH
 createBVHTree [] = error "Cannot construct BVH from empty list"
@@ -99,3 +149,8 @@ boxYCompare a b = compareBox a b 1
 
 boxZCompare :: SomeHittable -> SomeHittable -> Ordering
 boxZCompare a b = compareBox a b 2
+
+bvhObjectCount :: BVH -> Int
+bvhObjectCount (Leaf _ _) = 1
+bvhObjectCount (Branch _ left right) =
+    bvhObjectCount left + bvhObjectCount right

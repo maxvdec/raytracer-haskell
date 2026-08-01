@@ -10,10 +10,12 @@ import GHC.Float (roundFloat)
 import Geometry.AABB (AABB (axisX, axisY, axisZ), aabbFromAABBs, aabbFromPoints)
 import Geometry.Hit (Hit (..), Hittable (boundingBox, hit, pdfObjectValue, randomPdf), SomeHittable (SomeHittable), hitNormal, hitP, hitT, makeHit, setFaceNormal)
 import Geometry.HitInfo (HitInfo (normal, p, uv))
+import Geometry.ONB (makeONB, transformVectorBasedOnONB)
 import Geometry.Ray (Ray (Ray, direction, origin, time), at, makeRay)
 import Geometry.Scene (packHittables)
 import Graphics.Materials (SomeMaterial (SomeMaterial))
 import Math (Addable (..), Interval, Point3, RandomGenerator, TextureCoord, Vector3 (Vector3), contains, cross, degreesToRadians, dot, getX, getY, getZ, infinity, lengthSquared, randomFloat, unit, vecLength, (.*), (.-), (/.))
+import System.Random (RandomGen)
 
 data Sphere = Sphere
     { center :: Ray
@@ -110,6 +112,42 @@ instance Hittable Sphere where
                 box1 = aabbFromPoints ((at cent 0) - rvec) ((at cent 0) + rvec)
                 box2 = aabbFromPoints ((at cent 1) - rvec) ((at cent 1) + rvec)
              in aabbFromAABBs box1 box2
+
+    pdfObjectValue :: Sphere -> RandomGenerator -> Point3 -> Vector3 -> IO Float
+    pdfObjectValue obj gen org dir = do
+        let interval = (0.001, infinity) :: Interval
+            selfRay =
+                Ray
+                    { origin = org
+                    , direction = dir
+                    , time = 0
+                    }
+        selfResult <- hit obj gen selfRay interval
+        let distSquared = lengthSquared ((at (center obj) 0) - org)
+            cosThetaMax = sqrt (1 - (radius obj) * (radius obj) / distSquared)
+            solidAngle = 2 * pi * (1 - cosThetaMax)
+        case selfResult of
+            Nothing -> pure 0
+            Just _ -> pure (1 / solidAngle)
+
+    randomPdf :: Sphere -> RandomGenerator -> Point3 -> IO Vector3
+    randomPdf obj gen org = do
+        let dir = (at (center obj) 0) - org
+            distSqr = lengthSquared dir
+            uvw = makeONB dir
+        randomSphere <- randomToSphere distSqr
+        pure (transformVectorBasedOnONB uvw randomSphere)
+      where
+        randomToSphere :: Float -> IO Vector3
+        randomToSphere distSqr = do
+            let rad = (radius obj)
+            r1 <- randomFloat gen
+            r2 <- randomFloat gen
+            let z = 1 + r2 * (sqrt (1 - rad * rad / distSqr) - 1)
+                phi = 2 * pi * r1
+                x = cos phi * sqrt (1 - z * z)
+                y = sin phi * sqrt (1 - z * z)
+            pure (Vector3 x y z)
 
 data Quad = Quad
     { quadOrigin :: Point3

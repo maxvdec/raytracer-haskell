@@ -4,7 +4,7 @@ import Geometry.BVH (createBVHTree)
 import Geometry.Hit (SomeHittable (SomeHittable))
 import Geometry.Scene
 import Geometry.Shapes (makeBox, makeQuad, makeSphere, rotateBy, translateBy)
-import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeLambertian, makeLightFromColor, makeMetal, makeSolidLambertian)
+import Graphics.Materials (Lambertian (lambertianTexture), SomeMaterial (SomeMaterial), makeDielectric, makeLambertian, makeLightFromColor, makeMetal, makeSolidLambertian)
 import Graphics.Texture (SomeTexture (SomeTexture), loadImageTexture, makeNoiseTexture)
 import Math (Resolution, Vector3 (Vector3), (|>), (||>))
 
@@ -35,7 +35,7 @@ cornellBoxWorld = do
         green = makeSolidLambertian (Vector3 0.12 0.45 0.15)
         light = makeLightFromColor (Vector3 15 15 15)
 
-        aluminum = makeMetal (Vector3 0.8 0.85 0.88) 0.0
+        glass = makeDielectric 1.5
 
         left = makeQuad (Vector3 555 0 0) (Vector3 0 555 0) (Vector3 0 0 555) (SomeMaterial green)
         right = makeQuad (Vector3 0 0 0) (Vector3 0 555 0) (Vector3 0 0 555) (SomeMaterial red)
@@ -44,8 +44,8 @@ cornellBoxWorld = do
         wall' = makeQuad (Vector3 555 555 555) (Vector3 (-555) 0 0) (Vector3 0 0 (-555)) (SomeMaterial white)
         wall'' = makeQuad (Vector3 0 0 555) (Vector3 555 0 0) (Vector3 0 555 0) (SomeMaterial white)
 
-        box1 = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial aluminum)
-        box2 = makeBox (Vector3 0 0 0) (Vector3 165 165 165) (SomeMaterial white)
+        box = makeBox (Vector3 0 0 0) (Vector3 165 330 165) (SomeMaterial white)
+        sphere = makeSphere (Vector3 190 90 190) 90 (SomeMaterial glass)
 
         scene =
             [ SomeHittable left
@@ -54,13 +54,13 @@ cornellBoxWorld = do
             , SomeHittable wall'
             , SomeHittable wall''
             , SomeHittable lightPrim
-            , (box1 |> rotateBy 15 |> translateBy (Vector3 265 0 295))
-            , (box2 |> rotateBy (-18) |> translateBy (Vector3 130 0 65))
+            , (box |> rotateBy 15 |> translateBy (Vector3 265 0 295))
+            , SomeHittable sphere
             ]
 
         root = createBVHTree scene
 
-    pure (World{hittables = [SomeHittable root]}, makeLightsForSingle (SomeHittable lightPrim))
+    pure (World{hittables = [SomeHittable root]}, makeLights [SomeHittable lightPrim, SomeHittable sphere])
 
 cornellBoxScene :: Scene
 cornellBoxScene res = (cornellBoxCamera res, cornellBoxWorld)
