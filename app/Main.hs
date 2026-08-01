@@ -13,15 +13,17 @@ import Math (RandomGenerator, Resolution, Vector3 (Vector3), makeRandomGenerator
 import Renders (computedImage, rayPass)
 import Scenes.CornellBox (cornellBoxScene)
 import Scenes.CornellBoxSmoke (cornellBoxSmokeScene)
+import Scenes.FinalScene (finalScene)
 import Scenes.PerlinSpheres (perlinSpheresScene)
 import Scenes.Quads (quadsScene)
 import Scenes.SimpleLight (simpleLightScene)
 import Scenes.World (worldScene)
 import System.Environment (getArgs)
 import System.IO (IOMode (WriteMode), hPutStr, withFile)
+import Text.Read (readMaybe)
 
 normalResolution :: Resolution
-normalResolution = (1920, 1080)
+normalResolution = (1280, 720)
 
 devResolution :: Resolution
 devResolution = (400, 225)
@@ -37,6 +39,7 @@ matchScene name res = case (map toLower name) of
     "simple_light" -> simpleLightScene res
     "cornell" -> cornellBoxScene res
     "smoke" -> cornellBoxSmokeScene res
+    "final" -> finalScene res
     _ -> error "Scene does not exist"
 
 currentResolution :: Resolution
@@ -46,16 +49,26 @@ main :: IO ()
 main = do
     args <- getArgs
 
-    let sceneName =
+    let (sceneName, selectedResolution, selectedSamples) =
             case args of
-                name : _ -> name
-                [] -> ""
-    let (camera, makeWorld) = matchScene sceneName currentResolution
+                name : widthText : heightText : sampleText : _ ->
+                    case (readMaybe widthText, readMaybe heightText, readMaybe sampleText) of
+                        (Just width, Just height, Just sampleCount)
+                            | width > 0 && height > 0 && sampleCount > 0 ->
+                                (name, (width, height), Just sampleCount)
+                        _ -> error "Width, height, and samples must be positive integers"
+                name : _ -> (name, currentResolution, Nothing)
+                [] -> ("", currentResolution, Nothing)
+        (baseCamera, makeWorld) = matchScene sceneName selectedResolution
+        camera =
+            case selectedSamples of
+                Just sampleCount -> baseCamera{samplesPerPixel = sampleCount}
+                Nothing -> baseCamera
      in withFile "./output.ppm" WriteMode $ \handle -> do
             world <- makeWorld
-            hPutStr handle (ppmHeader currentResolution)
+            hPutStr handle (ppmHeader selectedResolution)
             computedImage
                 (rayPass camera world)
                 handle
-                currentResolution
+                selectedResolution
                 camera

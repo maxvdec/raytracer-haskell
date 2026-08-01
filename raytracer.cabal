@@ -79,6 +79,7 @@ executable raytracer
         Scenes.CornellBox
         Scenes.CornellBoxSmoke
         Geometry.ConstantMedium
+        Scenes.FinalScene
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -90,9 +91,10 @@ executable raytracer
         async,
         vector,
         transformers,
-        JuicyPixels
+        JuicyPixels,
+        bytestring
 
-    ghc-options: -O2 -threaded -rtsopts -with-rtsopts "-N -A64m"
+    ghc-options: -O2 -threaded -rtsopts -with-rtsopts "-N -A8m -M2g"
 
     -- Directories containing source files.
     hs-source-dirs:   app

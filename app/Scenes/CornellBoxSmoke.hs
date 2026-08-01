@@ -14,7 +14,7 @@ cornellBoxSmokeCamera res =
     Camera
         { viewportResolution = (0, 0)
         , resolution = res
-        , samplesPerPixel = 1000
+        , samplesPerPixel = 5000
         , maxDepth = 50
         , fov = 40
         , lookfrom = (Vector3 278 278 (-800))

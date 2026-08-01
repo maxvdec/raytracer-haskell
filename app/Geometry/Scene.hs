@@ -82,17 +82,19 @@ calculateTopLeftPos cam =
      in
         viewportUpperLeft + 0.5 .* (deltaU + deltaV)
 
-makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ray
-makeRayForCoordinate generator cam x y =
+makeRayGenerator :: Camera -> RandomGenerator -> Integer -> Integer -> IO Ray
+makeRayGenerator cam =
     let (deltaU, deltaV) = calculateDeltaUV cam
         pixel0Pos = calculateTopLeftPos cam
         camCenter = lookfrom cam
-     in do
-            offset <- sampleSquare
-            randomUnit <- defocusDiskSample generator
+     in \generator x y -> do
+            offset <- sampleSquare generator
+            rayOrigin <-
+                if defocusAngle cam <= 0
+                    then pure camCenter
+                    else defocusDiskSample generator
             rayTime <- randomFloat generator
             let sampleLoc = pixel0Pos + ((fromInteger x + getX offset) .* deltaU) + ((fromInteger y + getY offset) .* deltaV)
-            let rayOrigin = if (defocusAngle cam) <= 0 then camCenter else randomUnit
             pure
                 ( Ray
                     { origin = rayOrigin
@@ -101,8 +103,8 @@ makeRayForCoordinate generator cam x y =
                     }
                 )
   where
-    sampleSquare :: IO Vector3
-    sampleSquare = do
+    sampleSquare :: RandomGenerator -> IO Vector3
+    sampleSquare generator = do
         xOffset <- randomInRange generator (-0.5, 0.5)
         yOffset <- randomInRange generator (-0.5, 0.5)
 
@@ -113,6 +115,9 @@ makeRayForCoordinate generator cam x y =
         p <- randomInUnitDisk rand
         let result = lookfrom cam + ((getX p) .* (defocusDiskU cam)) + ((getY p) .* (defocusDiskV cam))
         pure result
+
+makeRayForCoordinate :: RandomGenerator -> Camera -> Integer -> Integer -> IO Ray
+makeRayForCoordinate generator cam = makeRayGenerator cam generator
 
 newtype World = World
     { hittables :: [SomeHittable]

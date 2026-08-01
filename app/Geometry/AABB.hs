@@ -3,9 +3,8 @@
 
 module Geometry.AABB where
 
-import Control.Monad (foldM)
 import Geometry.Ray (Ray (direction, origin))
-import Math (Addable ((+.), (.+)), Interval, Point3, Vector3, enclose, expand, getAxisFromVec3, getX, getY, getZ, sizeOfInterval, surrounds, (|>))
+import Math (Addable ((+.), (.+)), Interval, Point3, Vector3 (Vector3), enclose, expand, getX, getY, getZ, sizeOfInterval, (|>))
 
 data AABB = AABB
     { axisX :: Interval
@@ -61,28 +60,21 @@ getLongestAxisFromAABB aabb =
                 if lengthY > lengthZ then 1 else 2
 
 hitAABB :: AABB -> Ray -> Interval -> Maybe Interval
-hitAABB aabb r rayT = do
-    foldM hitAxis rayT [0, 1, 2]
+hitAABB aabb r rayT =
+    hitAxis (axisX aabb) ox dx rayT
+        >>= hitAxis (axisY aabb) oy dy
+        >>= hitAxis (axisZ aabb) oz dz
   where
-    hitAxis :: Interval -> Integer -> Maybe Interval
-    hitAxis inT i =
-        let rayOrigin = origin r
-            rayDir = direction r
-            axisInterval = getAxisFromAABB aabb i
+    Vector3 ox oy oz = origin r
+    Vector3 dx dy dz = direction r
 
-            adinv = 1.0 / getAxisFromVec3 rayDir i
-
-            t0 =
-                (fst axisInterval - getAxisFromVec3 rayOrigin i)
-                    * adinv
-
-            t1 =
-                (snd axisInterval - getAxisFromVec3 rayOrigin i)
-                    * adinv
-
+    hitAxis :: Interval -> Float -> Float -> Interval -> Maybe Interval
+    hitAxis axisInterval rayOrigin rayDirection inT =
+        let adinv = 1.0 / rayDirection
+            t0 = (fst axisInterval - rayOrigin) * adinv
+            t1 = (snd axisInterval - rayOrigin) * adinv
             nearT = min t0 t1
             farT = max t0 t1
-
             rayMin = max nearT (fst inT)
             rayMax = min farT (snd inT)
          in if rayMax < rayMin

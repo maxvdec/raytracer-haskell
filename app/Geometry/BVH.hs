@@ -2,8 +2,7 @@
 
 module Geometry.BVH where
 
-import Control.Applicative
-import Data.List (sort, sortBy)
+import Data.List (sortBy)
 import Geometry.AABB (AABB (AABB), aabbFromAABBs, getAxisFromAABB, getLongestAxisFromAABB, hitAABB)
 import Geometry.Hit (Hit (info), Hittable (boundingBox, hit), SomeHittable (SomeHittable))
 import Geometry.HitInfo (HitInfo (t))
@@ -16,29 +15,38 @@ data BVH
 
 instance Hittable BVH where
     hit :: BVH -> RandomGenerator -> Ray -> Interval -> IO (Maybe Hit)
-    hit bvh gen r rayT =
-        case bvh of
-            Leaf aabb obj -> hitLeaf aabb obj
-            Branch aabb node1 node2 -> hitBranch aabb node1 node2
+    hit bvh gen r rayT = hitNode bvh rayT
       where
-        hitLeaf :: AABB -> SomeHittable -> IO (Maybe Hit)
-        hitLeaf aabb obj = do
-            _ <- pure (hitAABB aabb r rayT)
-            hit obj gen r rayT
+        hitNode :: BVH -> Interval -> IO (Maybe Hit)
+        hitNode node interval =
+            case hitAABB (boundingBox node) r interval of
+                Nothing -> pure Nothing
+                Just _ -> hitKnownNode node interval
 
-        hitBranch :: AABB -> BVH -> BVH -> IO (Maybe Hit)
-        hitBranch aabb node1 node2 = do
-            _ <- pure (hitAABB aabb r rayT)
-            leftResult <- hit node1 gen r rayT
-            let newInterval =
-                    case leftResult of
-                        Nothing ->
-                            rayT
-                        Just h ->
-                            (fst rayT, t (info h))
-            rightResult <- hit node2 gen r newInterval
+        hitKnownNode :: BVH -> Interval -> IO (Maybe Hit)
+        hitKnownNode (Leaf _ obj) interval = hit obj gen r interval
+        hitKnownNode (Branch _ node1 node2) interval = hitChildren node1 node2 interval
 
-            pure (rightResult <|> leftResult)
+        hitChildren :: BVH -> BVH -> Interval -> IO (Maybe Hit)
+        hitChildren node1 node2 interval =
+            case (hitAABB (boundingBox node1) r interval, hitAABB (boundingBox node2) r interval) of
+                (Nothing, Nothing) -> pure Nothing
+                (Just _, Nothing) -> hitKnownNode node1 interval
+                (Nothing, Just _) -> hitKnownNode node2 interval
+                (Just interval1, Just interval2) ->
+                    if fst interval1 <= fst interval2
+                        then hitInOrder node1 node2 interval
+                        else hitInOrder node2 node1 interval
+
+        hitInOrder :: BVH -> BVH -> Interval -> IO (Maybe Hit)
+        hitInOrder firstNode secondNode interval = do
+            firstResult <- hitKnownNode firstNode interval
+            let closest = maybe (snd interval) (t . info) firstResult
+            secondResult <- hitNode secondNode (fst interval, closest)
+            pure $
+                case secondResult of
+                    Just result -> Just result
+                    Nothing -> firstResult
 
     boundingBox :: BVH -> AABB
     boundingBox (Leaf aabb _) = aabb
